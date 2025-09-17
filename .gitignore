@@ -1,3 +1,6 @@
+# Git setup
+.gitignore
+.gitmodules
 
 # Virtual environments
 venv/
