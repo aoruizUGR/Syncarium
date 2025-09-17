@@ -1,0 +1,76 @@
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# Compiled Python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment configuration files
+*.env
+*.ini
+*.cfg
+*.toml
+
+# Log and output files
+logs/
+*.log
+*.out
+*.err
+
+# Database or experimental result files
+*.sqlite3
+*.db
+*.h5
+*.pkl
+*.npy
+*.npz
+*.csv
+*.tsv
+*.json
+*.xlsx
+
+# System temporary files
+.DS_Store
+Thumbs.db
+
+# Jupyter notebook files
+.ipynb_checkpoints
+
+# Test and coverage files
+htmlcov/
+.tox/
+.nox/
+.coverage
+coverage.xml
+*.cover
+.cache
+.pytest_cache/
+
+# Generated documentation
+_build/
+docs/_build/
+
+# Local version control files
+*.swp
+*.swo
+
+# Backup files
+*~
+*.bak
+
+# Submodules (already versioned separately)
+submodules/dpdk
+submodules/TimeStick
+
+# Traffic Generators
+submodules/traffic_generators
+
+# Output
+output/*
+
+# Specific experiments scenarios
+config/experiments_scenarios/Ly3*/

@@ -1,0 +1,19 @@
+namespaces:
+  TimeStick_ns:
+    hardware:       "OCP-TAP_TimeStick"
+    IP/mask:        "10.102.0.10/24"
+    gateway:        "10.102.0.1"
+    interface:      "enxc8a3627c5084"
+    pps_mode:       "INDEF"
+  Intel710_ns:
+    hardware:       "Intel710"
+    IP/mask:        "10.103.0.10/24"
+    gateway:        "10.103.0.1"
+    interface:      "enp52s0f0np0"
+    pps_mode:       "OUT"
+  Intel810_ns:
+    hardware:       "Intel810"
+    IP/mask:        "10.104.0.10/24"
+    gateway:        "10.104.0.1"
+    interface:      "enp112s0f0np0"
+    pps_mode:       "OUT"

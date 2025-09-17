@@ -1,0 +1,18 @@
+dext_datasources:
+  Intel710_PTP_Log:
+    data_class: FileLogDataSource
+    pattern: "master offset\\s+(?P<offset>-?\\d+)\\s+s2\\s+freq\\s+(?P<freq>[+-]?\\d+)\\s+path delay\\s+(?P<delay>\\d+)"
+    filepath: logs/ptp-Intel710.log
+  TimeStick_PTP_Log:
+    data_class: FileLogDataSource
+    pattern: "master offset\\s+(?P<offset>-?\\d+)\\s+s2\\s+freq\\s+(?P<freq>[+-]?\\d+)\\s+path delay\\s+(?P<delay>\\d+)"
+    filepath: logs/ptp-TimeStick.log
+  Intel810_PTP_Log:
+    data_class: FileLogDataSource
+    pattern: "master offset\\s+(?P<offset>-?\\d+)\\s+s2\\s+freq\\s+(?P<freq>[+-]?\\d+)\\s+path delay\\s+(?P<delay>\\d+)"
+    filepath: logs/ptp-Intel810.log
+  PPSAnalyzer:
+    data_class: PPSAnalyzerDataSource
+    serial_port: "/dev/ttyUSB1"
+    pps_inputs: [3,4,5]
+    cable_delays: [0,0,0]
