@@ -33,7 +33,7 @@ import requests
 # Local Application Imports
 import syncarium.tui.utils as utils
 from syncarium.tui.core import SyncCore, LoadGen, DataEx
-from syncarium.options import global_vars
+from syncarium.options import global_vars, telegram_vars
 
 
 # ─────────────────────────────────────────────────────────────
@@ -149,8 +149,8 @@ class ExpOrchestra:
         self.delay_between: Optional[int] = None
 
         # Telegram notification setup
-        self.telegram_bot_token: str = "8271838891:AAFx8iR4uBg1qBo_p_JJiHRXPyoQ5G2COJY"
-        self.telegram_chat_id: str = "320604030"
+        self.telegram_bot_token: str = telegram_vars.TELEGRAM_BOT_TOKEN
+        self.telegram_chat_id: str = telegram_vars.TELEGRAM_CHAT_ID
 
 
 # ─────────────────────────────────────────────────────────────────────────────

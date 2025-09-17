@@ -74,3 +74,6 @@ output/*
 
 # Specific experiments scenarios
 config/experiments_scenarios/Ly3*/
+
+# Telegram pivacy tokens
+options/telegram_vars.py
