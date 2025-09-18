@@ -16,17 +16,19 @@ from pathlib import Path
 # ─────────────────────────────────────────────────────────────
 # MAIN DIRS VARS
 # ─────────────────────────────────────────────────────────────
-BASE_DIR: Path = Path(__file__).resolve().parent.parent
+ROOT_DIR: Path = Path(__file__).resolve().parent.parent.parent
 
-CONFIG_DIR: Path = BASE_DIR / "config"
+SYNCARIUM_DIR: Path = Path(__file__).resolve().parent.parent
 
-SCRIPTS_DIR: Path = BASE_DIR / "scripts"
+CONFIG_DIR: Path = SYNCARIUM_DIR / "config"
 
-OUTPUT_DIR: Path = BASE_DIR / "output"
+SCRIPTS_DIR: Path = SYNCARIUM_DIR / "scripts"
 
-SUBMODULES_DIR: Path = BASE_DIR / "submodules"
+OUTPUT_DIR: Path = ROOT_DIR / "output"
 
-LOG_DIR: Path = BASE_DIR / "logs"
+SUBMODULES_DIR: Path = ROOT_DIR / "submodules"
+
+LOG_DIR: Path = ROOT_DIR / "logs"
 
 
 # ─────────────────────────────────────────────────────────────

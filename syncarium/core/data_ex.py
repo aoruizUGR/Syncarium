@@ -239,7 +239,7 @@ class DataEx:
             except KeyboardInterrupt:
                 self.vt.console_message("caution", "Operation cancelled by user.")
                 return
-
+            
         # Load YAML configuration
         with open(filepath_cfg, 'r') as file:
             yaml_data = yaml.safe_load(file)
@@ -253,7 +253,7 @@ class DataEx:
                 if data_class == 'FileLogDataSource':
                     if not quiet: self.vt.console_message("info", f"Loading FileLogDataSource config: {source_name}", indent=1)
 
-                    log_path = global_vars.BASE_DIR / Path(source_info["filepath"])
+                    log_path = global_vars.LOG_DIR / Path(source_info["filepath"])
                     if not log_path.is_file():
                         if not quiet: 
                             self.vt.console_message("error", f"Log file not found: {log_path}", indent=2)
