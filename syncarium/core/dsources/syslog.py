@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# filelog.py
-
-**Project**: Syncarium – Intelligent Timing Platform Toolkit  
-**Description**: File Log Data Source Class  
-**Author**: PhD Student Alberto Ortega Ruiz, PhD Student Víctor Vázquez, University of Granada  
-**Created**: 2025-05-02  
-**Version**: 1.0.0  
-**License**: GPLv3
+===============================================================================
+ File Name   : syslog.py
+ Project     : Syncarium - Intelligent Timing Platform Toolkit
+ Description : System Log Data Source Class.
+ Author      : PhD Student Alberto Ortega Ruiz, PhD Student Víctor Vázquez, University of Granada
+ Created     : 2025-05-02
+ Version     : 1.0.0
+ License     : GPLv3
+===============================================================================
 """
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Standard Library Imports
 import os
 import re
 import time
-import queue
-import threading
-from pathlib import Path
-from typing import Generator, TextIO, Pattern
+import signal
+import multiprocessing
+from typing import List, Generator, TextIO
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Third-Party Imports
@@ -28,59 +27,55 @@ from typing import Generator, TextIO, Pattern
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-from syncarium.tui.core.dsources import DataSource
-from syncarium.tui.utils.viewtools import ViewTools
+from syncarium.core.dsources import DataSource
+
 
 # ─────────────────────────────────────────────────────────────
-#  🛢️ File Log Data Source SubSubClass
+#  🛢️ System Log Data Source SubSubClass
 # ─────────────────────────────────────────────────────────────
-class FileLogDataSource(DataSource):
+class SysLogDataSource(DataSource):
     """
-    A data source that monitors a log file in real time and extracts metrics using regex patterns.
+    A data source that monitors the system log and extracts metrics using a regex pattern.
 
-    This subclass of `DataSource` watches for new lines in a log file, applies a regex pattern
-    to extract named groups, and sends the extracted metrics to a shared queue.
+    This subclass of `DataSource` reads from `/var/log/syslog`, applies a regular expression
+    to each new line, and sends extracted named groups as metrics to a shared queue.
 
     ### Attributes
-    - **pattern** (`Pattern`): Compiled regex pattern used to extract metrics.
-    - **filepath** (`str`): Path to the log file being monitored.
+    - **pattern** (`str`): Regular expression pattern with named groups used to extract metrics.
     """
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🚧 Function: constructor
 # ─────────────────────────────────────────────────────────────────────────────
-    def __init__(self, name: str, queue: queue.Queue, event: threading.Event, pattern: str, filepath: str) -> None:
+    def __init__(self, name: str, queue: multiprocessing.Queue, event: multiprocessing.synchronize.Event, pattern: str) -> None:
         """
-        Initializes a `FileLogDataSource` with a regex pattern and log file path.
+        Initializes a `SysLogDataSource` with a regex pattern for metric extraction.
 
         ### Args
         - **name** (`str`): Identifier for the data source.
-        - **queue** (`queue.Queue`): Queue to send extracted metrics to.
-        - **event** (`threading.Event`): Event used to signal thread termination.
-        - **pattern** (`str`): Regex pattern used to extract metrics from log lines.
-        - **filepath** (`str`): Path to the log file to monitor.
-
-        ### Raises
-        - **FileNotFoundError**: If the specified log file does not exist.
+        - **queue** (`multiprocessing.Queue`): Queue for sending extracted metrics.
+        - **event** (`multiprocessing.synchronize.Event`): Event used to control the process lifecycle.
+        - **pattern** (`str`): Regular expression pattern with named groups to match log lines.
         """
         super().__init__(name, queue, event)
-        self.pattern: Pattern = re.compile(pattern)
-        self.filepath: str = filepath
-        if not Path(self.filepath).is_file():
-            raise FileNotFoundError(f"❌ Log file not found: {self.filepath}")
+        self.pattern = pattern
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 📌 Function: follow
 # ─────────────────────────────────────────────────────────────────────────────
     def follow(self, file: TextIO) -> Generator[str, None, None]:
         """
-        Generator that yields new lines appended to the file in real time.
+        Generator that yields new lines appended to a file in real time.
+
+        Mimics the behavior of `tail -f`, continuously reading new lines from the end
+        of the file until the stop event is triggered.
 
         ### Args
-        - **file** (`TextIO`): Opened file object to read from.
+        - **file** (`TextIO`): File object to monitor.
 
         ### Yields
-        - **str**: New lines as they are written to the file.
+        - **str**: New lines appended to the file.
         """
         file.seek(0, os.SEEK_END)
         while not self.event.is_set():
@@ -90,27 +85,42 @@ class FileLogDataSource(DataSource):
                 continue
             yield line
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 📌 Function: run
 # ─────────────────────────────────────────────────────────────────────────────
     def run(self) -> None:
         """
-        Starts the thread and processes new lines from the log file.
+        Starts the log monitoring process.
 
-        For each line that matches the regex pattern, extracts named groups and sends them
+        Opens `/var/log/syslog`, follows it in real time, and applies the regex pattern
+        to each new line. If a match is found, extracts named groups and sends them
         as timestamped metrics to the shared queue.
         """
-        try:
-            with open(self.filepath, 'r', encoding='utf-8') as file:
-                for line in self.follow(file):
-                    match = self.pattern.search(line)
-                    if not match:
-                        continue
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-                    timestamp = time.time_ns()
-                    for name, value in match.groupdict().items():
-                        self.send_metric(timestamp, name, value)
-        except Exception as e:
-            print(f"[{self.name}] ⚠️ Error: {e}")
+        with open("/var/log/syslog") as file:
+            for line in self.follow(file):
+                res = re.search(self.pattern, line)
+                if not res:
+                    continue
 
+                timestamp = time.time_ns()
+                for name, value in res.groupdict().items():
+                    self.send_metric(timestamp, name, value)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📌 Function: source_features
+# ─────────────────────────────────────────────────────────────────────────────
+    def source_features(self) -> List[str]:
+        """
+        Returns a list of features specific to this data source.
+
+        ### Returns
+        - **List[str]**: A list containing the regex pattern used for metric extraction.
+        """
+        features = []
+        features.append(self.pattern)
+        return features
 

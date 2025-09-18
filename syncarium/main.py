@@ -51,7 +51,7 @@ def launch_tui():
     This function imports and executes the main entry point of the TUI
     application, which is implemented using the Rich library.
     """
-    from syncarium.tui import TuiApp
+    from syncarium import TuiApp
     tui = TuiApp()
     tui.main()
 

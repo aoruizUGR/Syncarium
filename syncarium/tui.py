@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# app.py
+# tui.py
 
 **Project**: Syncarium - Intelligent Timing Platform Toolkit  
 **Description**: Syncarium TUI entry point  
@@ -22,8 +22,8 @@ from rich.console import Console
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-from syncarium.tui.utils import ViewTools
-from syncarium.tui.core import PlatInit, SyncCore, LoadGen, DataEx, ExpOrchestra
+from syncarium.utils import ViewTools
+from syncarium.core import PlatInit, SyncCore, LoadGen, DataEx, ExpOrchestra
 
 
 # ─────────────────────────────────────────────────────────────

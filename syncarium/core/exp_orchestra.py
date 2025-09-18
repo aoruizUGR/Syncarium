@@ -31,9 +31,10 @@ import requests
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-import syncarium.tui.utils as utils
-from syncarium.tui.core import SyncCore, LoadGen, DataEx
-from syncarium.options import global_vars, telegram_vars
+import syncarium.utils as utils
+from syncarium.core import SyncCore, LoadGen, DataEx
+import syncarium.options.global_vars as global_vars
+import syncarium.options.telegram_vars as telegram_vars
 
 
 # ─────────────────────────────────────────────────────────────

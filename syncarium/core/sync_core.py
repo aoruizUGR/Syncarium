@@ -31,8 +31,8 @@ from rich.prompt import Confirm
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-import syncarium.tui.utils as utils
-from syncarium.options import global_vars
+import syncarium.utils as utils
+import syncarium.options.global_vars as global_vars
 
 # ─────────────────────────────────────────────────────────────
 # 🕒 SyncCore Class

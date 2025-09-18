@@ -43,7 +43,7 @@ from InquirerPy import inquirer, get_style
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-from syncarium.tui.utils import SysAuxiliar
+from syncarium.utils import SysAuxiliar
 import syncarium.options.global_vars as global_vars
 
 # ─────────────────────────────────────────────────────────────
@@ -196,7 +196,7 @@ class ViewTools:
         Displays a centered subtitle panel with a description of the software's features.
 
         Uses the `rich` library to render a styled panel describing the purpose and
-        functionalities of Syncarium. The panel is centered both horizontally and vertically.
+        functionalities of  The panel is centered both horizontally and vertically.
         """
         
         # Create the content aligned to the left

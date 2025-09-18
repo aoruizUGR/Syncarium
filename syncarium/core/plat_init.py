@@ -25,7 +25,7 @@ from rich.prompt import Confirm
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-import syncarium.tui.utils as utils
+import syncarium.utils as utils
 import syncarium.options.global_vars as global_vars
 
 # ─────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ import syncarium.options.global_vars as global_vars
 
 class PlatInit:
     """
-    Sets up the platform setup environment for Syncarium.
+    Sets up the platform setup environment for 
 
     ### Attributes
     - **vt** (`utils.ViewTools`): Utility tools for rendering views in the console.
@@ -463,7 +463,7 @@ class PlatInit:
         if not self.loaded_namespaces:
             self.vt.console_message(
                 "caution",
-                "PPS I/O Configuration only works on namespaces started from this syncarium.",
+                "PPS I/O Configuration only works on namespaces started from this ",
                 indent=1
             )
             return

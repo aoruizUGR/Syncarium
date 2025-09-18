@@ -31,9 +31,9 @@ from rich.prompt import Prompt, IntPrompt, Confirm
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-import syncarium.tui.utils as utils
-import syncarium.tui.core.dsources as dsources
-from syncarium.options import global_vars
+import syncarium.utils as utils
+import syncarium.core.dsources as dsources
+import syncarium.options.global_vars as global_vars
 
 
 # ─────────────────────────────────────────────────────────────

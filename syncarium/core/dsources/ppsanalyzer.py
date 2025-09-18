@@ -40,7 +40,7 @@ import serial
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-from syncarium.tui.core.dsources import DataSource
+from syncarium.core.dsources import DataSource
 
 
 # ─────────────────────────────────────────────────────────────
