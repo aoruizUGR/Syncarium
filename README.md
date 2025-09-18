@@ -1,56 +1,74 @@
+
 # Syncarium
 
-**Syncarium** es una herramienta de software desarrollada en el marco de la tesis doctoral _"Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters"_ en la Universidad de Granada. Su objetivo es facilitar la configuración, despliegue y monitorización de plataformas de sincronización temporal en entornos distribuidos.
+**Syncarium** is a software tool developed as part of the doctoral thesis _"Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters"_ at the University of Granada. Its goal is to simplify the configuration, deployment, and monitoring of time synchronization platforms in distributed environments.
 
 ---
 
-## 🧪 Propósito
+## 🧪 Purpose
 
-Syncarium permite:
-- Automatizar el despliegue de herramientas de sincronización en nodos distribuidos.
-- Automatizar el desarrollo de experimentos para mediciones temporales.
-- Monitorizar la precisión de sincronización temporal entre dispositivos.
-- Integrarse con herramientas de análisis y visualización de datos temporales.
-
----
-
-## ⚙️ Características
-
-- Soporte para protocolos de sincronización (solamente soporte actual para PTP).
-- Interfaz modular para experimentación con diferentes configuraciones.
-- Registro detallado de métricas de sincronización.
-- Compatible con entornos Linux y Python 3.11.
+Syncarium enables:
+- Automated deployment of synchronization tools across distributed nodes.
+- Automated development of experiments for time measurements.
+- Monitoring of time synchronization accuracy between devices.
+- Integration with tools for temporal data analysis and visualization.
 
 ---
 
-## 📦 Instalación
+## ⚙️ Features
+
+- Support for synchronization protocols (currently only PTP).
+- Modular interface for experimenting with different configurations.
+- Detailed logging of synchronization metrics.
+- Compatible with Linux environments and Python 3.11.
+
+---
+
+## 📦 Installation
 
 ```bash
 git clone https://github.com/aoruizUGR/syncarium.git
-cd syncarium
+
 pip install -r requirements.txt
 ```
 
 ---
 
-## 🚀 Uso básico
+## 🚀 Basic Usage
 
 ```bash
-python -m main
+python -m syncarium.main
 ```
 
 ---
 
-## 📁 Estructura del proyecto
+## 📁 Project Structure
 
 ```
 Syncarium/
-├── core/               # Lógica principal del sistema
-├── config/             # Archivos de configuración YAML
-├── monitor/            # Módulos de monitorización
-├── utils/              # Funciones auxiliares
-├── tests/              # Pruebas unitarias
-└── README.md           # Este archivo
+│
+├── config/                         # Configuration templates for program components
+│   ├── datasources_scenarios/      # Templates for data sources
+│   ├── dpdk_profiles/              # Templates for DPDK profiles
+│   ├── experiments_scenarios/      # Templates for experiment scenarios
+│   ├── load_scenarios/             # Templates for load generation scenarios
+│   ├── namespaces_scenarios/       # Templates for namespace scenarios
+│   ├── ntp_profiles/               # Templates for NTP profiles
+│   └── ptp_profiles/               # Templates for PTP profiles
+│
+├── logs/           # Temporary log files
+├── options/        # Global configurable options for program execution
+├── output/         # Syncarium outputs
+├── scripts/        # Shell scripts for OS tasks
+├── submodules/     # External submodules
+├── tui/            # Program's TUI
+│   ├── core/       # Program core
+│   └── utils/      # Utilities for program execution
+│
+├── main.py             # Program entrypoint
+├── __init__.py         # Entrypoint module
+├── requirements.txt    # Dependencies
+└── README.md           # This file
 ```
 
 ---
@@ -67,36 +85,33 @@ Syncarium/
 - Operating System: **Linux**
 - Recommended Distribution: **Ubuntu** (tested)
 
-## 📜 Licencia
+## 📜 License
 
-Este software se distribuye bajo la licencia **MIT**. Puedes consultarla en el archivo `LICENSE`.
+This software is distributed under the **MIT** license. You can find it in the `LICENSE` file.
 
-> Si eres investigador y deseas reutilizar Syncarium en tus experimentos, por favor cita adecuadamente esta herramienta y su autoría.
+> If you are a researcher and wish to reuse Syncarium in your experiments, please cite this tool and its authorship appropriately.
 
 ---
 
-## 👨‍🔬 Autor
+## 👨‍🔬 Author
 
 **Alberto Ortega Ruiz**  
-Doctorando en Ingeniería de Telecomunicación  
-Universidad de Granada  
+PhD Candidate in Telecommunication Engineering  
+University of Granada  
 alberto.ortega@ugr.es
 
 ---
 
-## 📚 Referencias
+## 📚 References
 
-- Ortega Ruiz, A. (2025). *Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters*. Universidad de Granada.
+- Ortega Ruiz, A. (2025). *Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters*. University of Granada.
 - IEEE 1588 Precision Time Protocol (PTP)
 - NTP: Network Time Protocol
 
 ---
 
-## 🤝 Contribuciones
+## 🤝 Contributions
 
-Las contribuciones están abiertas para investigadores y desarrolladores interesados en la sincronización temporal. Por favor, abre un _issue_ o envía un _pull request_.
-```
+Contributions are welcome from researchers and developers interested in time synchronization. Please open an _issue_ or submit a _pull request_.
 
 ---
-
-¿Quieres que te genere también el archivo `LICENSE` con la licencia MIT? Puedo hacerlo ahora mismo.
