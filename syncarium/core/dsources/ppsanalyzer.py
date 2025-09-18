@@ -9,7 +9,7 @@
 - Original: Martin Burri `<info@burrima.ch>`, Sven Meier `<contact@nettimelogic.com>`  
 - Adapted: PhD Student Alberto Ortega Ruiz, PhD Student Víctor Vázquez, University of Granada  
 **Created**: 2025-05-02  
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **License**: GPLv3 (with portions under LGPLv3)
 
 ---
