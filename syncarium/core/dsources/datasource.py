@@ -7,7 +7,7 @@
 **Description**: Data Source Class.  
 **Author**: PhD Student Alberto Ortega Ruiz, PhD Student Víctor Vázquez, University of Granada  
 **Created**: 2025-05-02  
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **License**: GPLv3
 """
 
