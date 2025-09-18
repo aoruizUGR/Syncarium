@@ -37,7 +37,7 @@ ptp_clients:
 # TGEN STL PARAMETERS
 loadgen_stl_program: "stl_Ly3_E1.py"
 loadgen_stl_args:
-  load_percentage: 50
+  load_percentage: 75
   traffic_model: "TM1"
   port_list: "[0,1,2,3,4,5,6,7]"
 
@@ -65,5 +65,5 @@ dataex_datasources:
 synccore_start: -1
 synccore_stop_at_end: false
 loadgen_stl_start: 0
-dataex_start: 10
-total_duration: 120
+dataex_start: 60
+total_duration: 960

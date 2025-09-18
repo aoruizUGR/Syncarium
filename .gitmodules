@@ -1,0 +1,6 @@
+[submodule "submodules/TimeStick"]
+	path = submodules/TimeStick
+	url = https://github.com/Time-Appliances-Project/TimeStick.git
+[submodule "submodules/dpdk"]
+	path = submodules/dpdk
+	url = https://github.com/DPDK/dpdk.git
