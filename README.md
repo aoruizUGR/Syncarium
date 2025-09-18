@@ -1,29 +1,29 @@
 # Syncarium
 
-**Syncarium** es una herramienta de software desarrollada en el marco de la tesis doctoral _"Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters"_ en la Universidad de Granada. Su objetivo es facilitar la configuración, despliegue y monitorización de plataformas de sincronización temporal en entornos distribuidos.
+**Syncarium** is a software tool developed as part of the doctoral thesis _"Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters"_ at the University of Granada. Its goal is to simplify the configuration, deployment, and monitoring of time synchronization platforms in distributed environments.
 
 ---
 
-## 🧪 Propósito
+## 🧪 Purpose
 
-Syncarium permite:
-- Automatizar el despliegue de herramientas de sincronización en nodos distribuidos.
-- Automatizar el desarrollo de experimentos para mediciones temporales.
-- Monitorizar la precisión de sincronización temporal entre dispositivos.
-- Integrarse con herramientas de análisis y visualización de datos temporales.
-
----
-
-## ⚙️ Características
-
-- Soporte para protocolos de sincronización (solamente soporte actual para PTP).
-- Interfaz modular para experimentación con diferentes configuraciones.
-- Registro detallado de métricas de sincronización.
-- Compatible con entornos Linux y Python 3.11.
+Syncarium enables:
+- Automated deployment of synchronization tools across distributed nodes.
+- Automated development of experiments for time measurements.
+- Monitoring of time synchronization accuracy between devices.
+- Integration with tools for temporal data analysis and visualization.
 
 ---
 
-## 📦 Instalación
+## ⚙️ Features
+
+- Support for synchronization protocols (currently only PTP).
+- Modular interface for experimenting with different configurations.
+- Detailed logging of synchronization metrics.
+- Compatible with Linux environments and Python 3.11.
+
+---
+
+## 📦 Installation
 
 ```bash
 git clone https://github.com/aoruizUGR/syncarium.git
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🚀 Uso básico
+## 🚀 Basic Usage
 
 ```bash
 python -m syncarium.main
@@ -41,33 +41,33 @@ python -m syncarium.main
 
 ---
 
-## 📁 Estructura del proyecto
+## 📁 Project Structure
 
 ```
 syncarium/
 │
-├── config/                         # Plantillas de configuración para los componentes del programa
-│   ├── datasources_scenarios/      # Plantillas para fuentes de datos
-│   ├── dpdk_profiles/              # Plantillas para perfiles DPDK
-│   ├── experiments_scenarios/      # Plantillas para scenarios de experimentos
-│   ├── load_scenarios/             # Plantillas para scenarios de lanza de carga
-│   ├── namespaces_scenarios/       # Plantillas para scenarios de namespaces
-│   ├── ntp_profiles/               # Plantillas para perfiles NTP
-│   └── ptp_ptofiles/               # Plantillas para perfiles PTP
+├── config/                         # Configuration templates for program components
+│   ├── datasources_scenarios/      # Templates for data sources
+│   ├── dpdk_profiles/              # Templates for DPDK profiles
+│   ├── experiments_scenarios/      # Templates for experiment scenarios
+│   ├── load_scenarios/             # Templates for load generation scenarios
+│   ├── namespaces_scenarios/       # Templates for namespace scenarios
+│   ├── ntp_profiles/               # Templates for NTP profiles
+│   └── ptp_profiles/               # Templates for PTP profiles
 │
-├── logs/           # Archivos de logs temporales
-├── options/        # Opciones configurables globales para la ejecución del programa
-├── output/         # Salidas de Syncarium
-├── scripts/        # Scripts shell para tareas del SO
-├── submodules/     # Submódulos externos
-├── tui/            # TUI del programa
-│   ├── core/       # Core del programa
-│   └── utils/      # Utilidades para la ejecución del programa
+├── logs/           # Temporary log files
+├── options/        # Global configurable options for program execution
+├── output/         # Syncarium outputs
+├── scripts/        # Shell scripts for OS tasks
+├── submodules/     # External submodules
+├── tui/            # Program's TUI
+│   ├── core/       # Program core
+│   └── utils/      # Utilities for program execution
 │
-├── main.py             # Entrypoint del programa
-├── __init__.py         # Módulo del entrypoint
-├── requirements.txt    # Dependencias
-└── README.md           # Este archivo
+├── main.py             # Program entrypoint
+├── __init__.py         # Entrypoint module
+├── requirements.txt    # Dependencies
+└── README.md           # This file
 ```
 
 ---
@@ -79,29 +79,28 @@ syncarium/
 
 ---
 
-## 📜 Licencia
+## 📜 License
 
-Este software se distribuye bajo la licencia **GNUv3**. Puedes consultarla en el archivo `LICENSE`.
+This software is distributed under the **GPL-3.0** license. You can find it in the `LICENSE` file.
 
-> Si eres investigador y deseas reutilizar Syncarium en tus experimentos, por favor cita adecuadamente esta herramienta y su autoría.
+> If you are a researcher and wish to reuse Syncarium in your experiments, please cite this tool and its authorship appropriately.
 
 ---
 
-## 👨‍🔬 Autor
+## 👨‍🔬 Author
 
 **Alberto Ortega Ruiz**  
-PhD Student
-Time-based Technologies and Networks Lab
-University of Granada
+PhD Student  
+Time-based Technologies and Networks Lab  
+University of Granada  
 aoruiz@ugr.es
 
 ---
 
+## 🤝 Contributions
 
-## 🤝 Contribuciones
-
-- Víctor Vázquez Rodríguez
+- Víctor Vázquez Rodríguez  
 - NetTimeLogic GmbH, Switzerland
 
-Las contribuciones están abiertas para investigadores y desarrolladores interesados en la sincronización temporal. Por favor, abre un _issue_ o envía un _pull request_.
-```
+Contributions are welcome from researchers and developers interested in time synchronization. Please open an _issue_ or submit a _pull request_.
+
