@@ -1,30 +1,29 @@
-
 # Syncarium
 
-**Syncarium** is a software tool developed as part of the doctoral thesis _"Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters"_ at the University of Granada. Its goal is to simplify the configuration, deployment, and monitoring of time synchronization platforms in distributed environments.
+**Syncarium** es una herramienta de software desarrollada en el marco de la tesis doctoral _"Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters"_ en la Universidad de Granada. Su objetivo es facilitar la configuración, despliegue y monitorización de plataformas de sincronización temporal en entornos distribuidos.
 
 ---
 
-## 🧪 Purpose
+## 🧪 Propósito
 
-Syncarium enables:
-- Automated deployment of synchronization tools across distributed nodes.
-- Automated development of experiments for time measurements.
-- Monitoring of time synchronization accuracy between devices.
-- Integration with tools for temporal data analysis and visualization.
-
----
-
-## ⚙️ Features
-
-- Support for synchronization protocols (currently only PTP).
-- Modular interface for experimenting with different configurations.
-- Detailed logging of synchronization metrics.
-- Compatible with Linux environments and Python 3.11.
+Syncarium permite:
+- Automatizar el despliegue de herramientas de sincronización en nodos distribuidos.
+- Automatizar el desarrollo de experimentos para mediciones temporales.
+- Monitorizar la precisión de sincronización temporal entre dispositivos.
+- Integrarse con herramientas de análisis y visualización de datos temporales.
 
 ---
 
-## 📦 Installation
+## ⚙️ Características
+
+- Soporte para protocolos de sincronización (solamente soporte actual para PTP).
+- Interfaz modular para experimentación con diferentes configuraciones.
+- Registro detallado de métricas de sincronización.
+- Compatible con entornos Linux y Python 3.11.
+
+---
+
+## 📦 Instalación
 
 ```bash
 git clone https://github.com/aoruizUGR/syncarium.git
@@ -34,7 +33,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🚀 Basic Usage
+## 🚀 Uso básico
 
 ```bash
 python -m syncarium.main
@@ -42,76 +41,67 @@ python -m syncarium.main
 
 ---
 
-## 📁 Project Structure
+## 📁 Estructura del proyecto
 
 ```
-Syncarium/
+syncarium/
 │
-├── config/                         # Configuration templates for program components
-│   ├── datasources_scenarios/      # Templates for data sources
-│   ├── dpdk_profiles/              # Templates for DPDK profiles
-│   ├── experiments_scenarios/      # Templates for experiment scenarios
-│   ├── load_scenarios/             # Templates for load generation scenarios
-│   ├── namespaces_scenarios/       # Templates for namespace scenarios
-│   ├── ntp_profiles/               # Templates for NTP profiles
-│   └── ptp_profiles/               # Templates for PTP profiles
+├── config/                         # Plantillas de configuración para los componentes del programa
+│   ├── datasources_scenarios/      # Plantillas para fuentes de datos
+│   ├── dpdk_profiles/              # Plantillas para perfiles DPDK
+│   ├── experiments_scenarios/      # Plantillas para scenarios de experimentos
+│   ├── load_scenarios/             # Plantillas para scenarios de lanza de carga
+│   ├── namespaces_scenarios/       # Plantillas para scenarios de namespaces
+│   ├── ntp_profiles/               # Plantillas para perfiles NTP
+│   └── ptp_ptofiles/               # Plantillas para perfiles PTP
 │
-├── logs/           # Temporary log files
-├── options/        # Global configurable options for program execution
-├── output/         # Syncarium outputs
-├── scripts/        # Shell scripts for OS tasks
-├── submodules/     # External submodules
-├── tui/            # Program's TUI
-│   ├── core/       # Program core
-│   └── utils/      # Utilities for program execution
+├── logs/           # Archivos de logs temporales
+├── options/        # Opciones configurables globales para la ejecución del programa
+├── output/         # Salidas de Syncarium
+├── scripts/        # Scripts shell para tareas del SO
+├── submodules/     # Submódulos externos
+├── tui/            # TUI del programa
+│   ├── core/       # Core del programa
+│   └── utils/      # Utilidades para la ejecución del programa
 │
-├── main.py             # Program entrypoint
-├── __init__.py         # Entrypoint module
-├── requirements.txt    # Dependencies
-└── README.md           # This file
+├── main.py             # Entrypoint del programa
+├── __init__.py         # Módulo del entrypoint
+├── requirements.txt    # Dependencias
+└── README.md           # Este archivo
 ```
 
 ---
-
-## 🧰 Tools Used
-- **Python**
-- **Cisco TRex**
-- **ptp4l**
-- **Linux namespaces**
-- **Custom network drivers**
 
 ## 🖥️ Compatible Environment
 
 - Operating System: **Linux**
 - Recommended Distribution: **Ubuntu** (tested)
 
-## 📜 License
+---
 
-This software is distributed under the **MIT** license. You can find it in the `LICENSE` file.
+## 📜 Licencia
 
-> If you are a researcher and wish to reuse Syncarium in your experiments, please cite this tool and its authorship appropriately.
+Este software se distribuye bajo la licencia **GNUv3**. Puedes consultarla en el archivo `LICENSE`.
+
+> Si eres investigador y deseas reutilizar Syncarium en tus experimentos, por favor cita adecuadamente esta herramienta y su autoría.
 
 ---
 
-## 👨‍🔬 Author
+## 👨‍🔬 Autor
 
 **Alberto Ortega Ruiz**  
-PhD Candidate in Telecommunication Engineering  
-University of Granada  
-alberto.ortega@ugr.es
+PhD Student
+Time-based Technologies and Networks Lab
+University of Granada
+aoruiz@ugr.es
 
 ---
 
-## 📚 References
 
-- Ortega Ruiz, A. (2025). *Time Transfer and High Precision Synchronization in Spine-Leaf Topologies for Datacenters*. University of Granada.
-- IEEE 1588 Precision Time Protocol (PTP)
-- NTP: Network Time Protocol
+## 🤝 Contribuciones
 
----
+- Víctor Vázquez Rodríguez
+- NetTimeLogic GmbH, Switzerland
 
-## 🤝 Contributions
-
-Contributions are welcome from researchers and developers interested in time synchronization. Please open an _issue_ or submit a _pull request_.
-
----
+Las contribuciones están abiertas para investigadores y desarrolladores interesados en la sincronización temporal. Por favor, abre un _issue_ o envía un _pull request_.
+```
