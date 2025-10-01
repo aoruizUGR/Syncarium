@@ -24,7 +24,8 @@ CONFIG_DIR: Path = SYNCARIUM_DIR / "config"
 
 SCRIPTS_DIR: Path = SYNCARIUM_DIR / "scripts"
 
-OUTPUT_DIR: Path = ROOT_DIR / "output"
+#OUTPUT_DIR: Path = ROOT_DIR / "output"
+OUTPUT_DIR: Path = ROOT_DIR.parent / "output"
 
 SUBMODULES_DIR: Path = ROOT_DIR / "submodules"
 
