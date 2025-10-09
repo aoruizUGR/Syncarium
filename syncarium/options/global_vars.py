@@ -44,6 +44,8 @@ PTP_PROFILE_DIR: Path = CONFIG_DIR / "ptp_profiles"
 
 NTP_PROFILE_DIR: Path = CONFIG_DIR / "ntp_profiles"
 
+ANSIBLE_API_PATH: Path = SUBMODULES_DIR / "Ansible" / "lib"
+
 # ─────────────────────────────────────────────────────────────
 # LOADGEN VARS
 # ─────────────────────────────────────────────────────────────

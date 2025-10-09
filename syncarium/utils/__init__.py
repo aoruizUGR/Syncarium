@@ -12,5 +12,6 @@
 
 from .sysaux import SysAuxiliar
 from .viewtools import ViewTools
+from .telegram import TelegramBot
 
 __version__ = '1.0.0'

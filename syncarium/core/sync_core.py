@@ -109,7 +109,7 @@ class SyncCore:
                 self.vt.console_message("main_title", "Synchronization Core Menu", "⏱️")
 
                 # Render a table of active PTP processes
-                self.vt.table_synccore_processes()
+                self.vt.table_local_synccore_processes()
 
                 # Prompt user with interactive menu
                 choice: str = self.vt.console_select_menu(

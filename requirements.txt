@@ -3,3 +3,4 @@ psutil
 pyfiglet
 rich
 pyyaml
+ansible-core = 2.19.3

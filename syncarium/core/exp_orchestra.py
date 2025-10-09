@@ -3,7 +3,7 @@
 """
 # exp_orchestra.py
 
-**Project**: Syncarium – Intelligent Timing Platform Toolkit  
+**Project**: Syncarium - Intelligent Timing Platform Toolkit  
 **Description**: Syncarium ExpOrchestra  
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada  
 **Created**: 2025-06-27  
@@ -14,7 +14,6 @@
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Standard Library Imports
-
 import yaml
 import time
 import datetime
@@ -27,15 +26,13 @@ from logging.handlers import RotatingFileHandler
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Third-Party Imports
-import requests
+# (None used directly in this file)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
 import syncarium.utils as utils
 from syncarium.core import SyncCore, LoadGen, DataEx
 import syncarium.options.global_vars as global_vars
-import syncarium.options.telegram_vars as telegram_vars
-
 
 # ─────────────────────────────────────────────────────────────
 # ⚗️ ExpOrchestra Class
@@ -47,6 +44,7 @@ class ExpOrchestra:
 
     ### Attributes:
     - **vt** (`utils.ViewTools`): Utility tools for view-related operations.
+    - **telegram_bot** (`utils.TelegramBot`): TelegramBot for notifications.
     - **synccore** (`SyncCore`): Precision Time Protocol manager.
     - **loadgen** (`LoadGen`): Traffic generator manager.
     - **dataex** (`DataEx`): Data extractor tool instance.
@@ -70,8 +68,6 @@ class ExpOrchestra:
     - **stl_fn** (`Optional[str]`): Name of the STL script file.
     - **dataex_datasources** (`Any`): Data sources used by the extractor.
     - **synccore_clients** (`Any`): PTP clients involved in the experiment.
-    - **telegram_bot_token** (`str`): Telegram bot token used for sending notifications.
-    - **telegram_chat_id** (`str`): Telegram chat ID used for sending notifications.
     - **thread** (`Optional[threading.Thread]`): Thread handling the experiment execution.
     - **batch_thread** (`Optional[threading.Thread]`): Thread handling batch execution.
     - **stop_event** (`threading.Event`): Event used to signal experiment interruption.
@@ -88,7 +84,8 @@ class ExpOrchestra:
         synccore: SyncCore,
         loadgen: LoadGen,
         dataex: DataEx,
-        vt: utils.ViewTools
+        vt: utils.ViewTools,
+        telegram_bot: utils.TelegramBot
     ) -> None:
         """
         Initializes the ExpOrchestra with the required components for experiment execution.
@@ -107,6 +104,7 @@ class ExpOrchestra:
 
         # Store tool instances
         self.vt: utils.ViewTools = vt
+        self.telegram_bot: utils.TelegramBot = telegram_bot
         self.synccore: SyncCore = synccore
         self.loadgen: LoadGen = loadgen
         self.dataex: DataEx = dataex
@@ -149,11 +147,6 @@ class ExpOrchestra:
         self.actual_repetition: Optional[int] = None
         self.delay_between: Optional[int] = None
 
-        # Telegram notification setup
-        self.telegram_bot_token: str = telegram_vars.TELEGRAM_BOT_TOKEN
-        self.telegram_chat_id: str = telegram_vars.TELEGRAM_CHAT_ID
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 📋 Function: main_menu
 # ─────────────────────────────────────────────────────────────────────────────
@@ -190,7 +183,7 @@ class ExpOrchestra:
                 self.vt.console_message("main_title", "ExpOrchestra Menu", "⚗️")
 
                 # Show current PTP processes
-                self.vt.table_synccore_processes()
+                self.vt.table_local_synccore_processes()
 
                 # Show current STL process status
                 self.vt.table_stl_program(
@@ -489,7 +482,7 @@ class ExpOrchestra:
             return
 
         # Notify via Telegram
-        self.notify_telegram_bot(message=f"⚗️ Starting Experiment {self.fn} with ID {self.hash_id}")
+        self.telegram_bot.send_message(message=f"⚗️ Starting Experiment {self.fn} with ID {self.hash_id}")
 
         # Update internal state and record start time
         self.state = "Running"
@@ -573,7 +566,7 @@ class ExpOrchestra:
             self.vt.console_message("caution", "Experiment stopped.", logger=self.logger)
             self.state = "Stopped"
             # Notify Telegram
-            self.notify_telegram_bot(message=f"⚠️ Stopped Experiment {self.fn} with ID {self.hash_id}")
+            self.telegram_bot.send_message(message=f"⚠️ Stopped Experiment {self.fn} with ID {self.hash_id}")
 
         else: 
             self.vt.console_message("success", "Experiment completed.", logger=self.logger)
@@ -583,16 +576,16 @@ class ExpOrchestra:
             if self.synccore_stop_at_end is True:
                 self.synccore.stop_ptp(preconfirmation=True,logger=self.logger)
             # Notify Telegram
-            self.notify_telegram_bot(message=f"✅ Finished Experiment {self.fn} with ID {self.hash_id}")
+            self.telegram_bot.send_message(message=f"✅ Finished Experiment {self.fn} with ID {self.hash_id}")
         
         # Actualize batch info
         if self.total_repetitions:
             # Notify via Telegram
-            self.notify_telegram_bot(message=f"🏭 Repetition number {self.actual_repetition}/{self.total_repetitions} of the experiment {self.fn} completed.")
+            self.telegram_bot.send_message(message=f"🏭 Repetition number {self.actual_repetition}/{self.total_repetitions} of the experiment {self.fn} completed.")
             self.actual_repetition = self.actual_repetition + 1
         
             if self.actual_repetition == self.total_repetitions + 1:
-                self.notify_telegram_bot(message=f"🏭 Batch of the experiment {self.fn} completed.")
+                self.telegram_bot.send_message(message=f"🏭 Batch of the experiment {self.fn} completed.")
                 self.actual_repetition = None
                 self.total_repetitions = None
 
@@ -643,7 +636,7 @@ class ExpOrchestra:
         self.vt.console_message("success", f"Batch of {self.total_repetitions} repetitions for experiment {selected} launched.")
         
         # Notify via Telegram
-        self.notify_telegram_bot(message=f"🏭 Starting a batch of the experiment {selected}, {self.total_repetitions} repetitions and {self.delay_between} seconds between experiments.")
+        self.telegram_bot.send_message(message=f"🏭 Starting a batch of the experiment {selected}, {self.total_repetitions} repetitions and {self.delay_between} seconds between experiments.")
         
         def batch_runner(stop_event: threading.Event) -> None:
             for i in range(self.total_repetitions):
@@ -763,7 +756,7 @@ class ExpOrchestra:
         self.vt.console_message("success", "Batch stop signal sent.", indent=extra_indent)
 
         # Notify via Telegram
-        self.notify_telegram_bot(message=f"🏭 Batch of the experiment {self.fn} stopped at {self.actual_repetition}/{self.total_repetitions}.")
+        self.telegram_bot.send_message(message=f"🏭 Batch of the experiment {self.fn} stopped at {self.actual_repetition}/{self.total_repetitions}.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -873,32 +866,4 @@ class ExpOrchestra:
             
             # Notify user
             if not quiet: self.vt.console_message("success", "Laboratory cleaned.", indent=1)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: notify_telegram_bot
-# ─────────────────────────────────────────────────────────────────────────────
-    def notify_telegram_bot(self, message: str) -> None:
-        """
-        Sends a message to the configured Telegram bot.
-
-        Constructs and sends a POST request to the Telegram Bot API using the stored
-        bot token and chat ID. If the request fails, an error message is shown in the console.
-
-        ### Args:
-        - **message** (`str`): Text message to send via Telegram.
-        """
-
-        if self.telegram_bot_token:
-            url: str = f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage"
-            data: dict[str, str] = {
-                "chat_id": self.telegram_chat_id,
-                "text": message
-            }
-
-            response = requests.post(url, data=data)
-
-            # Handle failed request
-            if response.status_code != 200:
-                self.vt.console_message("error", f"Error sending message: {response.text}")
 

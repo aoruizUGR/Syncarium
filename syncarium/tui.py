@@ -22,7 +22,7 @@ from rich.console import Console
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-from syncarium.utils import ViewTools
+from syncarium.utils import ViewTools, TelegramBot
 from syncarium.core import PlatInit, SyncCore, LoadGen, DataEx, ExpOrchestra
 
 
@@ -68,6 +68,9 @@ class TuiApp:
         # Utility view tools
         self.vt: ViewTools = ViewTools(console=self.console, version="1.0.0")
 
+        # Utility TelegramBot
+        self.tb: TelegramBot = TelegramBot()
+
         # Initialize each menu/tool with the shared console instance
         self.platinit: PlatInit = PlatInit(self.vt)
         self.synccore: SyncCore = SyncCore(self.vt)
@@ -79,7 +82,8 @@ class TuiApp:
             self.synccore,
             self.loadgen,
             self.dataex,
-            self.vt
+            self.vt,
+            self.tb
         )
 
 # ─────────────────────────────────────────────────────────────────────────────

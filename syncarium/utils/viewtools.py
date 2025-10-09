@@ -502,9 +502,9 @@ class ViewTools:
             self.console_message("error",f"Error retrieving namespaces: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 🧮 Function: table_synccore_processes
+# 🧮 Function: table_local_synccore_processes
 # ─────────────────────────────────────────────────────────────────────────────   
-    def table_synccore_processes(self) -> None:
+    def table_local_synccore_processes(self) -> None:
         """
         Displays a table of currently running PTP (Precision Time Protocol) processes.
 
@@ -512,6 +512,62 @@ class ViewTools:
         such as PID, start time, command line, and stdout redirection path. If no processes
         are found, a warning panel is shown.
         """
+
+        # Run pgrep to find all running ptp4l processes with full command line
+        result = subprocess.run(["sudo","pgrep", "-a", "ptp4l"], capture_output=True, text=True)
+        lines = result.stdout.strip().splitlines()
+
+        # If no processes are found, show a warning panel
+        if not lines:
+            self.console.print(Panel.fit(
+                "[bold yellow]No local PTP processes have been started or are currently running.[/bold yellow]",
+                title="⏱️ PTP Local Processes Status",
+                border_style="red"
+            ))
+            return
+
+        # Create a rich table to display process information
+        table = Table(
+            title="⏱️ PTP Local Processes Status",
+            show_header=True,
+            header_style="bold cyan",
+            title_justify="left",
+        )
+        table.add_column("PID", justify="center", overflow="fold")
+        table.add_column("Start Time", justify="center", overflow="fold")
+        table.add_column("Command", justify="left", overflow="fold")
+        table.add_column("Stdout Redirection", justify="left", overflow="fold")
+
+        # Populate the table with process details
+        for line in lines:
+            pid, *cmd = line.split()
+            cmd_str = " ".join(cmd)
+
+            # Get process start time
+            start_time = datetime.datetime.strptime(
+                subprocess.run(
+                    ["sudo", "ps", "-p", pid, "-o", "lstart="], capture_output=True, text=True
+                ).stdout.strip().replace("  ", " "), "%a %b %d %H:%M:%S %Y"
+            ).strftime("%d-%m-%Y %H:%M:%S")
+
+
+
+            # Get stdout redirection path (if any)
+            stdout_path = subprocess.run(
+                ["sudo", "readlink", f"/proc/{pid}/fd/1"],
+                capture_output=True,
+                text=True
+            ).stdout.strip() or "N/A"
+
+            table.add_row(pid, start_time, cmd_str, stdout_path)
+
+        # Print the table to the console
+        self.console.print(table)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🧮 Function: table_external_synccore_processes
+# ─────────────────────────────────────────────────────────────────────────────   
+    def table_external_synccore_processes(self) -> None:
 
         # Run pgrep to find all running ptp4l processes with full command line
         result = subprocess.run(["sudo","pgrep", "-a", "ptp4l"], capture_output=True, text=True)
