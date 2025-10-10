@@ -29,6 +29,7 @@ import yaml
 import locale
 from pathlib import Path
 from typing import Optional, List, Any
+from typing import Deque
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Third-Party Imports
@@ -43,8 +44,8 @@ from InquirerPy import inquirer, get_style
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-from syncarium.utils import SysAuxiliar
 import syncarium.options.global_vars as global_vars
+from syncarium.utils import SysAuxiliar
 
 # ─────────────────────────────────────────────────────────────
 # 🖥️ View Tools Class
@@ -1022,56 +1023,23 @@ class ViewTools:
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Function: table_experiment
 # ─────────────────────────────────────────────────────────────────────────────
-    def table_experiment(
-        self,
-        exp_fn: str,
-        exp_state: str,
-        exp_id: str,
-        exp_duration: int,
-        exp_start_ts: float,
-        exp_ptp_clients: str,
-        exp_ptp_ts: int,
-        exp_stl_fn: str,
-        exp_stl_ts: int,
-        exp_dext_datasources: str,
-        exp_dext_ts: int
-    ) -> None:
-        """
-        Displays a table summarizing the current experiment's status and associated files.
-
-        Shows metadata including experiment ID, name, state, duration, start time,
-        and associated PTP, STL, and DEXT components with their respective start times.
-
-        ### Args
-        - **exp_fn** (`str`): Name of the experiment.
-        - **exp_state** (`str`): Current state of the experiment (e.g., `"Running"`, `"Completed"`).
-        - **exp_id** (`str`): Unique identifier (HashID) of the experiment.
-        - **exp_duration** (`int`): Total duration of the experiment in seconds.
-        - **exp_start_ts** (`float`): Timestamp when the experiment started.
-        - **exp_ptp_clients** (`str`): Comma-separated list of PTP client names.
-        - **exp_ptp_ts** (`int`): Start time (in seconds) of the PTP process.
-        - **exp_stl_fn** (`str`): Filename of the STL file.
-        - **exp_stl_ts** (`int`): Start time (in seconds) of the STL process.
-        - **exp_dext_datasources** (`str`): Comma-separated list of DEXT data sources.
-        - **exp_dext_ts** (`int`): Start time (in seconds) of the DEXT process.
-        """
-
-        if not exp_id:
-            # Show a warning if no experiment is loaded or running
+    def table_experiment_queue(self, queue: Deque[Any]) -> None:
+        if len(queue) == 0:
             self.console.print(Panel.fit(
-                "[bold yellow]No experiment loaded or running.[/bold yellow]",
-                title="🧪 Laboratory Status",
+                "[bold yellow]Empty experiment queue.[/bold yellow]",
+                title="🧪 Laboratory Queue",
                 border_style="red"
             ))
             return
 
-        # Create and configure the table
         table = Table(
-            title="🧪 Laboratory Status",
+            title="🧪 Laboratory Queue",
             show_header=True,
             header_style="bold cyan",
             title_justify="left"
         )
+        
+        table.add_column("Order", justify="right", style="bold green")
         table.add_column("HashID", justify="center", overflow="fold")
         table.add_column("State", justify="center", overflow="fold")
         table.add_column("Name", justify="center", overflow="fold")
@@ -1081,44 +1049,44 @@ class ViewTools:
         table.add_column("STL File (Start)", justify="center", overflow="fold")
         table.add_column("DEXT Datasources (Start)", justify="center", overflow="fold")
 
-        # Format Duration
-        exp_duration_str = str(datetime.timedelta(seconds=exp_duration))
+        for idx, exp in enumerate(queue, start=1):
+            # Format duration
+            exp_duration_str: str = str(datetime.timedelta(seconds=exp.duration))
 
-        # Format Start Timestamp
-        if exp_start_ts:
-            exp_start_ts_str = datetime.datetime.fromtimestamp(exp_start_ts).strftime("%d-%m-%Y %H:%M:%S")
-        else:
-            exp_start_ts_str = "Not started yet"
+            # Format start timestamp
+            if exp.start_ts:
+                exp_start_ts_str: str = datetime.datetime.fromtimestamp(exp.start_ts).strftime("%d-%m-%Y %H:%M:%S")
+            else:
+                exp_start_ts_str = "Not started yet"
 
-        # Format STL
-        if exp_stl_ts == -1:
-            exp_stl_fn_str = f"{exp_stl_fn} (NOT)"
-        else:
-            exp_stl_fn_str = f"{exp_stl_fn} ({str(datetime.timedelta(seconds=exp_stl_ts))})"
-        
-        # Format PTP
-        if exp_ptp_ts == -1:
-            exp_ptp_fn_str = ", ".join(exp_ptp_clients) + " (NOT)"
-        else:
-            exp_ptp_fn_str = ",".join(exp_ptp_clients) + f" ({str(datetime.timedelta(seconds=exp_ptp_ts))})"
+            # Format STL
+            if exp.stl_start == -1:
+                exp_stl_fn_str = f"{exp.stl_fn} (NOT)"
+            else:
+                exp_stl_fn_str = f"{exp.stl_fn} ({str(datetime.timedelta(seconds=exp.stl_start))})"
 
-        # Format DEXT
-        exp_dext_fn_str = ",".join(exp_dext_datasources) + f" ({str(datetime.timedelta(seconds=exp_dext_ts))})"
+            # Format PTP
+            if exp.synccore_start == -1:
+                exp_ptp_fn_str = ", ".join(exp.synccore_clients) + " (NOT)"
+            else:
+                exp_ptp_fn_str = ", ".join(exp.synccore_clients) + f" ({str(datetime.timedelta(seconds=exp.synccore_start))})"
 
+            # Format DEXT
+            exp_dext_fn_str = ", ".join(exp.dataex_datasources) + f" ({str(datetime.timedelta(seconds=exp.dataex_start))})"
 
-        # Add a row with the current experiment status
-        table.add_row(
-            exp_id,
-            exp_state,
-            exp_fn,
-            exp_duration_str,
-            exp_start_ts_str,
-            exp_ptp_fn_str,
-            exp_stl_fn_str,
-            exp_dext_fn_str
-        )
+            # Add row
+            table.add_row(
+                str(idx),
+                exp.hash_id,
+                exp.state,
+                exp.fn,
+                exp_duration_str,
+                exp_start_ts_str,
+                exp_ptp_fn_str,
+                exp_stl_fn_str,
+                exp_dext_fn_str
+            )
 
-        # Print the table to the console
         self.console.print(table)
 
 # ─────────────────────────────────────────────────────────────────────────────

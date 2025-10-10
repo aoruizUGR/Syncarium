@@ -10,7 +10,7 @@
 **License**: GPLv3
 """
 
-
+from .experiment import Experiment
 from .plat_init import PlatInit
 from .sync_core import SyncCore
 from .load_gen import LoadGen

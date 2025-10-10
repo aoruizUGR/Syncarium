@@ -12,7 +12,7 @@
 
 
 from .tui import TuiApp
-from .core import PlatInit, SyncCore, LoadGen, DataEx
-from .utils import ViewTools
+from .core import PlatInit, SyncCore, LoadGen, DataEx, Experiment
+from .utils import ViewTools, TelegramBot
 
 __version__ = '1.0.0'
