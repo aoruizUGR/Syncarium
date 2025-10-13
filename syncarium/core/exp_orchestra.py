@@ -54,7 +54,7 @@ class ExpOrchestra:
         Initializes the ExpOrchestra with the required components for experiment execution.
 
         Sets up references to the PTP manager, traffic generator, data extractor, and view tools.
-        Also initializes internal current_state variables, directory paths, logging configuration,
+        Also initializes internal state variables, directory paths, logging configuration,
         and timing metadata for managing experiment lifecycle.
 
         ### Args:
@@ -125,6 +125,10 @@ class ExpOrchestra:
                 # Show experiment queue
                 self.vt.table_experiment_queue(
                     self.queue
+                )
+
+                self.vt.table_current_experiment(
+                    self.current_experiment
                 )
 
                 # Display interactive menu and get user choice
@@ -240,14 +244,14 @@ class ExpOrchestra:
             return 
         
         choices = [{"name": f"{i}. Experiment with HashID {obj.hash_id}", "value": obj} for i, obj in enumerate(self.queue, 1)]
-        selected = self.vt.console_select_menu(
+        selected: Experiment = self.vt.console_select_menu(
             choices=choices,
             message="Available queued experiments:",
             indent=1
         )
 
         self.queue.remove(selected)
-        self.vt.console_message("success", f"Experiment {selected} removed from queue.", indent=1)
+        self.vt.console_message("success", f"Experiment {selected.fn} with HashID {selected.hash_id} removed from queue.", indent=1)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 📌 Function: interrupted_sleep
@@ -276,20 +280,14 @@ class ExpOrchestra:
 # 📌 Function: launch_first_experiment
 # ─────────────────────────────────────────────────────────────────────────────
     def launch_first_experiment(self, quiet: bool = False) -> None:
-        """
-        Starts an experiment in a background thread and sets up logging.
-
-        Initializes a timestamped logger with a rotating file handler, then launches
-        the experiment asynchronously using a daemon thread. Any exceptions during
-        execution are logged automatically.
-
-        """
         if len(self.queue) == 0:
             self.vt.console_message("error", "No experiments in the queue.")
             return
 
         # Notify user that experiment is starting
         if not quiet: self.vt.console_message("title", "Starting First Experiment of the queue.", "🧪")
+
+        self.current_experiment = self.queue.pop()
 
         # Create and configure logger
         timestamp: str = time.strftime('%d-%m-%Y_%H:%M:%S')
@@ -298,7 +296,7 @@ class ExpOrchestra:
 
         # Add rotating file handler if not already present
         if not self.logger.handlers:
-            handler = RotatingFileHandler(self.output_log, maxBytes=5_000_000, backupCount=3)
+            handler = RotatingFileHandler(self.current_experiment.output_log, maxBytes=5_000_000, backupCount=3)
             formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
@@ -319,19 +317,12 @@ class ExpOrchestra:
         self.thread.start()
 
         # Notify user that logging has started
-        if not quiet: self.vt.console_message("success", f"Experiment logging saving in {self.output_log}")
+        if not quiet: self.vt.console_message("success", f"Experiment logging saving in {self.current_experiment.output_log}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 📌 Function: launch_an_experiment
 # ─────────────────────────────────────────────────────────────────────────────
     def launch_an_experiment(self, quiet: bool = False) -> None:
-
-        # Ensure an experiment is loaded before proceeding
-        if len(self.queue) == 0:
-            self.vt.console_message("error", "No experiment in the queue. Please add an experiment first.", indent=1, logger=self.logger)
-            return
-        
-        self.current_experiment = self.queue.pop()
 
         # If PTP enabled, kill actual clients and load new PTP clients
         if self.current_experiment.synccore_start != -1:
@@ -355,7 +346,7 @@ class ExpOrchestra:
         self.vt.console_message("title", "Starting Experiment", "⚗️", logger=self.logger)
 
         # Notify via Telegram
-        self.telegram_bot.send_message(message=f"⚗️ Starting Experiment {self.current_fn} with ID {self.current_hash_id}")
+        self.telegram_bot.send_message(message=f"⚗️ Starting Experiment {self.current_experiment.fn} with ID {self.current_experiment.hash_id}")
 
         # Update internal state and record start time
         self.current_experiment.state = "Running"
@@ -367,13 +358,13 @@ class ExpOrchestra:
             (
                 self.current_experiment.dataex_start,
                 lambda: self.dataex.start_extraction(
-                    suffix_out=f"{self.current_experiment.fn}_{self.current_experiment.hash_id}",
-                    dir_out=self.current_experiment.exp_output_dir,
-                    duration_out=self.current_experiment.dataex_duration,
-                    logger=self.logger,
-                    extra_indent=1
+                    csv_fn_out      = self.current_experiment.output_csv,
+                    yaml_fn_out     = self.current_experiment.output_yaml,
+                    duration_out    = self.current_experiment.dataex_duration,
+                    logger          = self.logger,
+                    extra_indent    = 1
                 ),
-                "dataex"
+                "DataEx"
             )
         ]
 
@@ -382,11 +373,11 @@ class ExpOrchestra:
             tasks.append((
                 self.current_experiment.synccore_start,
                 lambda: self.synccore.start_ptp(
-                    logger=self.logger,
-                    extra_indent=1,
-                    stop = False
+                    logger          = self.logger,
+                    extra_indent    = 1,
+                    stop            = False
                 ),
-                "PTP"
+                "SyncCore"
             ))
 
         # Include STL task if configured
@@ -394,13 +385,13 @@ class ExpOrchestra:
             tasks.append((
                 self.current_experiment.stl_start,
                 lambda: self.loadgen.start_stl_program(
-                    self.current_experiment.fn_absolute_path,
-                    self.current_experiment.stl_duration,
-                    self.current_experiment.output_yaml,
-                    logger=self.logger,
-                    extra_indent=1
+                    file_cfg        = self.current_experiment.fn_absolute_path,
+                    stl_duration    = self.current_experiment.stl_duration,
+                    stl_output      = self.current_experiment.output_yaml,
+                    logger          = self.logger,
+                    extra_indent    = 1
                 ),
-                "STL"
+                "LoadGen"
             ))
 
         # Sort tasks by their scheduled start time
@@ -426,7 +417,7 @@ class ExpOrchestra:
 
         if not self.stop_event.is_set():
             # Notify user of experiment duration
-            self.vt.console_message("info", f"Experiment will run for {int(self.dataex_duration)} seconds.", indent=1, logger=self.logger)
+            self.vt.console_message("info", f"Experiment will run for {int(self.current_experiment.dataex_duration)} seconds.", indent=1, logger=self.logger)
 
         # Wait for the experiment to complete
         remaining: float = self.current_experiment.duration - (time.time() - start_time)
@@ -439,7 +430,7 @@ class ExpOrchestra:
             self.vt.console_message("caution", "Experiment stopped.", logger=self.logger)
             self.current_experiment.state = "Stopped"
             # Notify Telegram
-            self.telegram_bot.send_message(message=f"⚠️ Stopped Experiment {self.current_fn} with ID {self.current_hash_id}")
+            self.telegram_bot.send_message(message=f"⚠️ Stopped Experiment {self.current_experiment.fn} with ID {self.current_experiment.hash_id}")
 
         else: 
             self.vt.console_message("success", "Experiment completed.", logger=self.logger)
@@ -449,7 +440,7 @@ class ExpOrchestra:
             if self.current_experiment.synccore_stop_at_end is True:
                 self.synccore.stop_ptp(preconfirmation=True,logger=self.logger)
             # Notify Telegram
-            self.telegram_bot.send_message(message=f"✅ Finished Experiment {self.current_fn} with ID {self.current_hash_id}")
+            self.telegram_bot.send_message(message=f"✅ Finished Experiment {self.current_experiment.fn} with ID {self.current_experiment.hash_id}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -519,11 +510,11 @@ class ExpOrchestra:
 # ─────────────────────────────────────────────────────────────────────────────
     def stop_current_experiment(self, extra_indent: int = 0) -> None:
         """
-        Stops all components of a running experiment and updates its current_state.
+        Stops all components of a running experiment and updates its state.
 
         Attempts to stop PTP synchronization, data extraction, and STL traffic generation
         if they were configured. Any errors encountered during shutdown are reported.
-        The experiment current_state is updated to `"Stopped"` once all components are terminated.
+        The experiment state is updated to `"Stopped"` once all components are terminated.
 
         ### Args:
         - **extra_indent** (`int`): Indentation level for console messages. Defaults to `0`.
@@ -622,13 +613,13 @@ class ExpOrchestra:
         self.vt.console_message("title", "Showing progress", "⏳")
 
         # Check if an experiment has been started
-        if not self.current_fn:
+        if not self.current_experiment:
             self.vt.console_message("caution", "No data extraction was started.", indent=1)
             return
 
         # Show real-time progress bar
-        if self.current_state == "Running":
-            self.vt.real_time_progress(self.current_start_ts, self.current_experiment.duration, "⏳ Experiment running...", repetition_info= f"{self.actual_repetition}/{self.total_repetitions}")
+        if self.current_experiment.state == "Running":
+            self.vt.real_time_progress(self.current_experiment.start_ts, self.current_experiment.duration, "⏳ Experiment running...")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -643,12 +634,12 @@ class ExpOrchestra:
         """
 
         # Check if experiment is running
-        if self.current_state != "Running":
+        if self.current_experiment.state != "Running":
             self.vt.console_message("caution", "No experiment was started.", indent=1)
             return
 
         # Stream the real-time log output
-        log_path: Path = self.output_log
+        log_path: Path = self.current_experiment.output_log
         self.vt.real_time_log(log_path)
 
 
@@ -669,7 +660,7 @@ class ExpOrchestra:
             return
 
         # Stream the real-time log output
-        log_path: Path = self.dataex.output_filepath
+        log_path: Path = self.dataex.csv_output_filepath
         self.vt.real_time_log(log_path)
 
 

@@ -67,3 +67,4 @@ synccore_stop_at_end: false
 loadgen_stl_start: -1
 dataex_start: 60
 total_duration: 960
+output_filepath: "Ly3_CTOp_IDLE/Ly3_CTOp_L0-T15-IDLE"

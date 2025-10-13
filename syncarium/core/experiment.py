@@ -43,6 +43,7 @@ class Experiment:
             self.fn = file_cfg.stem
             self.fn_absolute_path = Path(file_cfg).resolve()
             self.hash_id = hashlib.md5(str(time.time()).encode()).hexdigest()[:4]
+            self.fn_hashid = f"{self.fn}_{self.hash_id}"
             self.start_ts = None
             self.duration = int(data.get("total_duration"))
             self.state = "Queued"
@@ -53,13 +54,13 @@ class Experiment:
             self.synccore_clients = list(data.get("synccore_clients", {}).keys())
 
             # Prepare output directories
-            relative_folder = file_cfg.parent.relative_to(global_vars.EXPERIMENTS_DIR)
-            self.exp_output_dir = global_vars.OUTPUT_DIR / relative_folder / self.fn
+            self.exp_output_dir = global_vars.OUTPUT_DIR / Path(data.get("output_filepath"))
             self.exp_output_dir.mkdir(parents=True, exist_ok=True)
 
             # Prepare output file paths
-            self.output_log = global_vars.OUTPUT_DIR / f"{self.fn}_{self.hash_id}.log"
-            self.output_yaml = global_vars.OUTPUT_DIR / f"{self.fn}_{self.hash_id}.yaml"
+            self.output_log  = self.exp_output_dir / f"{self.fn_hashid}.log"
+            self.output_yaml = self.exp_output_dir / f"{self.fn_hashid}.yaml"
+            self.output_csv  = self.exp_output_dir / f"{self.fn_hashid}.csv"
 
             # Load start times and current_durations
             self.stl_start = int(data.get("loadgen_stl_start"))

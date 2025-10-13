@@ -67,3 +67,4 @@ synccore_stop_at_end: true
 loadgen_stl_start: 0
 dataex_start: 60
 total_duration: 3660
+output_filepath: "Ly3_CTStab/Ly3_CTStab_L50-T60-TM2"
