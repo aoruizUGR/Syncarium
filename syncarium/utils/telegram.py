@@ -7,7 +7,7 @@
 **Description**: Telegram Bot utilities.  
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada  
 **Created**: 2025-10-08  
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **License**: GPLv3
 """
 

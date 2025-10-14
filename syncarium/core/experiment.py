@@ -7,7 +7,7 @@
 **Description**: Syncarium Experiment  
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada  
 **Created**: 2025-10-09
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **License**: GPLv3
 """
 
