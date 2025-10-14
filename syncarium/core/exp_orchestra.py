@@ -81,7 +81,7 @@ class ExpOrchestra:
         self.thread: threading.Thread | None = None
         self.stop_event: threading.Event = threading.Event()
         self.logger: Any = None
-        self.intergap_delay: Optional[int] = None        
+        self.interexp_delay: Optional[int] = 900       
 
         # Directory paths
         self.exp_dir: Path = global_vars.EXPERIMENTS_DIR
@@ -100,15 +100,16 @@ class ExpOrchestra:
         The loop runs until the user selects **"❌ Exit"** or interrupts with **Ctrl+C**.
 
         ### Menu Options:
-        - ⚗️ Load Experiment → `load_experiment`
-        - ⚗️ Launch Experiment → `launch_experiment_bg`
-        - 🏭 Launch Experiment Batch → `launch_experiment_batch`
-        - 🛑⚗️ Stop Experiment → `stop_experiment`
-        - 🛑🏭 Stop Experiment Batch → `stop_experiment_batch`
-        - ⏳ Show Progress → `show_progress`
-        - 📄 Show Experiment Status → `show_experiment`
-        - 📄 Show Extracted Data → `show_extracted_data`
-        - 🔄 Refresh View → Refreshes the current view without taking action
+        - 🧪 Add Experiment → add_exp
+        - 🗑️ Remove Experiment → remove_exp
+        - ▶️🧪 Start First Experiment → launch_first_exp
+        - 🛑🧪 Stop Current Experiment → stop_current_exp
+        - ▶️🏭 Start Queue → launch_queue
+        - 🛑🏭 Stop Queue → stop_queue
+        - ⏳ Show Current Experiment Progress → show_current_exp_progress
+        - 📄 Show Current Experiment Log → show_current_exp_log
+        - 📄 Show Current Experiment Data → show_current_exp_data
+        - 🔄 Refresh view → refresh_view
         - ❌ Exit → Exits the menu
         """
        
@@ -121,6 +122,7 @@ class ExpOrchestra:
                 # Display software title and main menu header
                 self.vt.console_software_title(delay=0)
                 self.vt.console_message("main_title", "ExpOrchestra Menu", "⚗️")
+                self.vt.console_message("info", f"Delay between experiments: {self.interexp_delay} seconds")
 
                 # Show experiment queue
                 self.vt.table_experiment_queue(
@@ -134,32 +136,34 @@ class ExpOrchestra:
                 # Display interactive menu and get user choice
                 choice: str = self.vt.console_select_menu(
                     choices=[
-                        {"name": "🧪 Add Experiment to Queue", "value": "add_experiment_queue"},
-                        {"name": "🗑️ Remove Experiment from Queue", "value": "remove_experiment_queue"},
-                        {"name": "▶️🧪 Start One Queue Experiment", "value": "launch_first_experiment"},
-                        {"name": "🛑🧪 Stop Current Experiment", "value": "stop_current_experiment"},
-                        {"name": "▶️🏭 Start Whole Queue", "value": "launch_whole_queue"},
-                        {"name": "🛑🏭 Stop Whole Queue", "value": "stop_whole_queue"},
-                        {"name": "⏳ Show Progress", "value": "show_progress"},
-                        {"name": "📄 Show Current Experiment Log", "value": "show_current_experiment_log"},
-                        {"name": "📄 Show Current Experiment Data", "value": "show_current_experiment_data"},
+                        {"name": "🧪 Add Experiment", "value": "add_exp"},
+                        {"name": "🗑️ Remove Experiment", "value": "remove_exp"},
+                        {"name": "▶️🧪 Start First Experiment", "value": "launch_first_exp"},
+                        {"name": "🛑🧪 Stop Current Experiment", "value": "stop_current_exp"},
+                        {"name": "▶️🏭 Start Queue", "value": "launch_queue"},
+                        {"name": "🛑🏭 Stop Queue", "value": "stop_queue"},
+                        {"name": "🕒 Set Inter-Experiment Delay", "value": "set_interexp_delay"},
+                        {"name": "⏳ Show Current Experiment Progress", "value": "show_current_exp_progress"},
+                        {"name": "📄 Show Current Experiment Log", "value": "show_current_exp_log"},
+                        {"name": "📄 Show Current Experiment Data", "value": "show_current_exp_data"},
                         {"name": "🔄 Refresh view", "value": "refresh_view"},
-                        {"name": "❌ Exit", "value": "exit"},
+                        {"name": "❌ Exit", "value": "exit"}
                     ],
                     indent=1
                 )
 
                 # Map menu options to corresponding methods
                 submenu: dict[str, Callable[[], None]] = {
-                    "add_experiment_queue":         self.add_experiment_queue,
-                    "remove_experiment_queue":      self.remove_experiment_queue,
-                    "launch_first_experiment":      self.launch_first_experiment,
-                    "stop_current_experiment":      self.stop_current_experiment,
-                    "launch_whole_queue":           self.launch_whole_queue,
-                    "stop_whole_queue":             self.stop_whole_queue,
-                    "show_progress":                self.show_progress,
-                    "show_current_experiment_log":  self.show_current_experiment_log,
-                    "show_current_experiment_data": self.show_current_experiment_data,
+                    "add_exp":                self.add_exp,
+                    "remove_exp":            self.remove_exp,
+                    "launch_first_exp":      self.launch_first_exp,
+                    "stop_current_exp":             self.stop_current_exp,
+                    "launch_queue":                 self.launch_queue,
+                    "stop_queue":                   self.stop_queue,
+                    "set_interexp_delay":           self.set_interexp_delay,
+                    "show_current_exp_progress":                self.show_current_exp_progress,
+                    "show_current_exp_log":         self.show_current_exp_log,
+                    "show_current_exp_data":        self.show_current_exp_data,
                 }
 
                 # Handle user selection
@@ -177,9 +181,9 @@ class ExpOrchestra:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: add_experiment_queue
+# 📌 Function: add_exp
 # ─────────────────────────────────────────────────────────────────────────────
-    def add_experiment_queue(self, file_cfg: Optional[Path] = None, quiet: bool = False) -> None:
+    def add_exp(self, file_cfg: Optional[Path] = None, quiet: bool = False) -> None:
 
         # Display section title
         if not quiet: self.vt.console_message("title", "Adding Experiment", "🧪")
@@ -236,9 +240,9 @@ class ExpOrchestra:
             self.vt.console_message("error", f"Error adding experiment: {e}", indent=1)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: remove_experiment_queue
+# 📌 Function: remove_exp
 # ─────────────────────────────────────────────────────────────────────────────
-    def remove_experiment_queue(self) -> None:
+    def remove_exp(self) -> None:
         if not self.queue:
             self.vt.console_message("error", f"The experiment queue is empty.")
             return 
@@ -277,9 +281,9 @@ class ExpOrchestra:
             elapsed += interval
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: launch_first_experiment
+# 📌 Function: launch_first_exp
 # ─────────────────────────────────────────────────────────────────────────────
-    def launch_first_experiment(self, quiet: bool = False) -> None:
+    def launch_first_exp(self, quiet: bool = False) -> None:
         if len(self.queue) == 0:
             self.vt.console_message("error", "No experiments in the queue.")
             return
@@ -287,7 +291,7 @@ class ExpOrchestra:
         # Notify user that experiment is starting
         if not quiet: self.vt.console_message("title", "Starting First Experiment of the queue.", "🧪")
 
-        self.current_experiment = self.queue.pop()
+        self.current_experiment = self.queue.popleft()
 
         # Create and configure logger
         timestamp: str = time.strftime('%d-%m-%Y_%H:%M:%S')
@@ -442,73 +446,14 @@ class ExpOrchestra:
             # Notify Telegram
             self.telegram_bot.send_message(message=f"✅ Finished Experiment {self.current_experiment.fn} with ID {self.current_experiment.hash_id}")
 
+        if len(self.queue) == 0:
+            self.telegram_bot.send_message(message=f"🏭 Queue empty.")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: launch_whole_queue
+# 📌 Function: stop_current_exp
 # ─────────────────────────────────────────────────────────────────────────────
-    def launch_whole_queue(self) -> None:
-
-        # Ask user for number of repetitions and delay
-        self.vt.console_message("title", "Batch Configuration", "⚙️")
-
-        files: list[str] = [
-            str(f.relative_to(self.exp_dir))
-            for f in self.exp_dir.rglob("*.yaml")
-            if f.is_file()
-        ]
-        if not files:
-            self.vt.console_message("error", f"No experiment files found in '{self.exp_dir}'.", indent=1)
-            return
-        try:
-            choices = [{"name": f"{i}. 📄 {name}", "value": name} for i, name in enumerate(sorted(files), 1)]
-            selected: str = self.vt.console_select_menu(
-                choices=choices,
-                message="Available Experiments:",
-                indent=1
-            )
-            filepath_cfg: Path = selected
-        except KeyboardInterrupt:
-            self.vt.console_message("caution", "Operation cancelled by user.")
-            return
-        
-        self.total_repetitions: int = int(self.vt.console.input("Enter number of repetitions:"))
-        self.delay_between: int = int(self.vt.console.input("Enter delay between experiments (in seconds):"))
-        self.actual_repetition = 1
-
-        self.vt.console_message("success", f"Batch of {self.total_repetitions} repetitions for experiment {selected} launched.")
-        
-        # Notify via Telegram
-        self.telegram_bot.send_message(message=f"🏭 Starting a batch of the experiment {selected}, {self.total_repetitions} repetitions and {self.delay_between} seconds between experiments.")
-        
-        def batch_runner(stop_event: threading.Event) -> None:
-            for i in range(self.total_repetitions):
-                if stop_event.is_set():
-                    break
-
-                if stop_event.is_set():
-                    break
-
-                self.load_experiment(filepath_cfg, quiet=True)
-                if stop_event.is_set():
-                    break
-
-                self.launch_experiment_bg(quiet=True)
-                if stop_event.is_set():
-                    break
-
-                if i < self.total_repetitions - 1:
-                    for _ in range(int(self.current_experiment.duration + self.delay_between)):
-                        if stop_event.is_set():
-                            break
-                        time.sleep(1)
-
-        self.batch_thread = threading.Thread(target=lambda: batch_runner(self.stop_event), daemon=True)
-        self.batch_thread.start()
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: stop_current_experiment
-# ─────────────────────────────────────────────────────────────────────────────
-    def stop_current_experiment(self, extra_indent: int = 0) -> None:
+    def stop_current_exp(self, extra_indent: int = 0) -> None:
         """
         Stops all components of a running experiment and updates its state.
 
@@ -526,7 +471,7 @@ class ExpOrchestra:
 
 
         # Check if an experiment is currently running
-        if self.current_state != "Running":
+        if self.current_experiment.state != "Running":
             self.vt.console_message("warning", "No experiment is currently running.", indent=1)
             return
 
@@ -534,7 +479,7 @@ class ExpOrchestra:
         self.stop_event.set()
 
         # Attempt to stop PTP component if it was configured
-        if self.synccore_start != -1:
+        if self.current_experiment.synccore_start != -1:
             try:
                 self.synccore.stop_ptp(preconfirmation=True, logger=self.logger, extra_indent=1)
             except Exception as e:
@@ -547,7 +492,7 @@ class ExpOrchestra:
             errors.append(f"dataex: {e}")
 
         # Attempt to stop STL component if it was configured
-        if self.stl_start != -1:
+        if self.current_experiment.stl_start != -1:
             try:
                 self.loadgen.stop_stl_program(logger=self.logger, extra_indent=1, preconfirmation=True)
             except Exception as e:
@@ -560,24 +505,60 @@ class ExpOrchestra:
                 self.vt.console_message("error", f"Error stopping component: {err}", indent=1)
                 return
             
-        # Update experiment current_state
+        # Update experiment state
         self.thread.join(timeout=5)
-        self.current_state = "Stopped"
+        self.current_experiment.state = "Stopped"
         self.vt.console_message("success", "All experiment components stopped successfully.", logger=self.logger)
         self.vt.console_message("success", "All experiment components stopped successfully.", indent=extra_indent)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: stop_whole_queue
+# 📌 Function: launch_queue
 # ─────────────────────────────────────────────────────────────────────────────
-    def stop_whole_queue(self, extra_indent: int = 0) -> None:
+    def launch_queue(self) -> None:
+        
+        if len(self.queue) == 0:
+            self.vt.console_message("error", "No experiments in the queue.")
+            return            
+
+        # Ask user for number of repetitions and delay
+        self.vt.console_message("title", "Launching entire queue...", "🏭")
+
+        
+        # Notify via Telegram
+        self.telegram_bot.send_message(message=f"🏭 Starting entire experiment queue with {self.interexp_delay} seconds between experiments.")
+        
+        def queue_runner(stop_event: threading.Event) -> None:
+
+            while len(self.queue) != 0:
+
+                if stop_event.is_set():
+                    break
+
+                self.launch_first_exp(quiet=True)
+
+                if stop_event.is_set():
+                    break
+
+                for _ in range(int(self.current_experiment.duration + self.interexp_delay)):
+                    if stop_event.is_set():
+                        break
+                    time.sleep(1)
+
+        self.queue_thread = threading.Thread(target=lambda: queue_runner(self.stop_event), daemon=True)
+        self.queue_thread.start()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📌 Function: stop_queue
+# ─────────────────────────────────────────────────────────────────────────────
+    def stop_queue(self, extra_indent: int = 0) -> None:
         """
-        Stops all running experiments in the current batch.
+        Stops all running experiments in the current queue.
 
         Signals the stop event to interrupt any ongoing or scheduled experiment launches.
         Also calls `stop_experiment()` to clean up the currently running experiment, and
-        waits for the batch thread to finish execution.
+        waits for the queue thread to finish execution.
 
-        A Telegram notification is sent to indicate the batch was stopped.
+        A Telegram notification is sent to indicate the queue was stopped.
 
         ### Args:
         - **extra_indent** (`int`): Indentation level for console messages. Defaults to `0`.
@@ -587,23 +568,34 @@ class ExpOrchestra:
         self.stop_event.set()
 
         # Stop the currently running experiment
-        self.stop_experiment(extra_indent=extra_indent)
+        self.stop_current_exp(extra_indent=extra_indent)
 
-        self.vt.console_message("title", "Stopping Experiment Batch", "🛑", indent=extra_indent)
+        self.vt.console_message("title", "Stopping Experiment Queue", "🛑", indent=extra_indent)
         
-        # Stop entire batch
-        self.batch_thread.join()
+        # Stop entire queue
+        self.queue_thread.join()
 
-        self.vt.console_message("success", "Batch stop signal sent.", indent=extra_indent)
+        self.vt.console_message("success", "Queue stop signal sent.", indent=extra_indent)
 
         # Notify via Telegram
-        self.telegram_bot.send_message(message=f"🏭 Batch of the experiment {self.current_fn} stopped at {self.actual_repetition}/{self.total_repetitions}.")
+        self.telegram_bot.send_message(message=f"🏭 Queue stopped.")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📌 Function: set_interexp_delay
+# ─────────────────────────────────────────────────────────────────────────────
+    def set_interexp_delay(self) -> None:
+        # Display section title
+        self.vt.console_message("title", "Setting Inter-Experiment Delay", "🕒")
+        
+        self.interexp_delay = int(self.vt.console.input("Enter number of seconds to wait between experiments:"))
+
+        self.vt.console_message("success", "Inter-experiment delay set.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: show_progress
+# 📌 Function: show_current_exp_progress
 # ─────────────────────────────────────────────────────────────────────────────
-    def show_progress(self) -> None:
+    def show_current_exp_progress(self) -> None:
         """
         Displays real-time progress of the self.current_experiment.
 
@@ -623,9 +615,9 @@ class ExpOrchestra:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: show_current_experiment_log
+# 📌 Function: show_current_exp_log
 # ─────────────────────────────────────────────────────────────────────────────
-    def show_current_experiment_log(self) -> None:
+    def show_current_exp_log(self) -> None:
         """
         Displays the real-time log output of the self.current_experiment.
 
@@ -644,9 +636,9 @@ class ExpOrchestra:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: show_current_experiment_data
+# 📌 Function: show_current_exp_data
 # ─────────────────────────────────────────────────────────────────────────────
-    def show_current_experiment_data(self) -> None:
+    def show_current_exp_data(self) -> None:
         """
         Displays the real-time log output of the data extraction process.
 

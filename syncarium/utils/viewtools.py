@@ -1025,13 +1025,13 @@ class ViewTools:
         if len(queue) == 0:
             self.console.print(Panel.fit(
                 "[bold yellow]Empty experiment queue.[/bold yellow]",
-                title="🧪 Laboratory Queue",
+                title="🧪 Laboratory FIFO Queue",
                 border_style="red"
             ))
             return
 
         table = Table(
-            title="🧪 Laboratory Queue",
+            title="🧪 Laboratory FIFO Queue",
             show_header=True,
             header_style="bold cyan",
             title_justify="left"
