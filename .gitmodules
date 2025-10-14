@@ -4,3 +4,6 @@
 [submodule "submodules/dpdk"]
 	path = submodules/dpdk
 	url = https://github.com/DPDK/dpdk.git
+[submodule "submodules/linuxptp"]
+	path = submodules/linuxptp
+	url = https://github.com/richardcochran/linuxptp.git

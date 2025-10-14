@@ -7,7 +7,7 @@
 **Description**: Syncarium global variables  
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada  
 **Created**: 2025-09-19  
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **License**: GPLv3
 """
 
@@ -24,7 +24,8 @@ CONFIG_DIR: Path = SYNCARIUM_DIR / "config"
 
 SCRIPTS_DIR: Path = SYNCARIUM_DIR / "scripts"
 
-OUTPUT_DIR: Path = ROOT_DIR / "output"
+#OUTPUT_DIR: Path = ROOT_DIR / "output"
+OUTPUT_DIR: Path = ROOT_DIR.parent / "output"
 
 SUBMODULES_DIR: Path = ROOT_DIR / "submodules"
 
@@ -42,6 +43,8 @@ NAMESPACES_DIR: Path = CONFIG_DIR / "namespaces_scenarios"
 PTP_PROFILE_DIR: Path = CONFIG_DIR / "ptp_profiles"
 
 NTP_PROFILE_DIR: Path = CONFIG_DIR / "ntp_profiles"
+
+ANSIBLE_API_PATH: Path = SUBMODULES_DIR / "Ansible" / "lib"
 
 # ─────────────────────────────────────────────────────────────
 # LOADGEN VARS

@@ -6,11 +6,11 @@
 **Project**: Syncarium - Intelligent Timing Platform Toolkit  
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada  
 **Created**: 2025-05-22  
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **License**: GPLv3
 """
 
-
+from .experiment import Experiment
 from .plat_init import PlatInit
 from .sync_core import SyncCore
 from .load_gen import LoadGen

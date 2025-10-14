@@ -7,7 +7,7 @@
 **Description**: Data Extractor for TUI  
 **Author**: PhD Student Alberto Ortega Ruiz, PhD Student Víctor Vázquez, University of Granada  
 **Created**: 2025-05-31  
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **License**: GPLv3
 """
 
@@ -48,7 +48,7 @@ class DataEx:
     - **output_dir** (`Path`): Directory where output files will be stored.
     - **loaded_datasources** (`List[dsources.DataSource]`): List of data sources that have been loaded.
     - **writer_process** (`multiprocessing.Process`): Background process responsible for writing output.
-    - **output_filepath** (`Optional[Path]`): Path to the output file, if available.
+    - **csv_output_filepath** (`Optional[Path]`): Path to the output file, if available.
     - **start_time** (`Optional[float]`): Timestamp marking the start of the extraction process.
     - **duration** (`Optional[int]`): Duration of the extraction process in seconds.
     """
@@ -78,7 +78,8 @@ class DataEx:
         self.writer_process: multiprocessing.Process = multiprocessing.Process()
 
         # Initialize metadata for output tracking
-        self.output_filepath: Optional[Path] = None
+        self.csv_output_filepath: Optional[Path] = None
+        self.yaml_output_filepath: Optional[Path] = None
         self.start_time: Optional[float] = None
         self.duration: Optional[int] = None
 
@@ -127,10 +128,10 @@ class DataEx:
                 self.vt.table_datasources(self.loaded_datasources)
 
                 # Show extractor status and output information
-                self.vt.table_data_extractor(
+                self.vt.table_current_extraction(
                     self.writer_process,
                     self.loaded_datasources,
-                    self.output_filepath,
+                    self.csv_output_filepath,
                     self.start_time,
                     self.duration
                 )
@@ -302,34 +303,13 @@ class DataEx:
 # ─────────────────────────────────────────────────────────────────────────────
     def start_extraction(
         self,
-        suffix_out: Optional[str] = None,
-        dir_out: Optional[str] = None,
+        csv_fn_out: Optional[Path] = None,
+        yaml_fn_out: Optional[Path] = None,
         duration_out: Optional[int] = None,
         logger=None,
         extra_indent: int = 0
     ) -> None:
-        """
-        Start the data extraction process using the configured data sources.
-
-        Launches a background writer process that collects metrics and stores them
-        in a CSV file. A YAML summary file is also generated, containing metadata
-        about the extraction session.
-
-        ### Args
-        - **suffix_out** (`Optional[str]`): Suffix for the output CSV file name. If `None`, the user is prompted.
-        - **dir_out** (`Optional[str]`): Directory where output files will be saved. If `None`, defaults to the configured output directory.
-        - **duration_out** (`Optional[int]`): Duration of the extraction in seconds. If `None`, the user is prompted.
-        - **logger**: Optional logger instance for logging messages.
-        - **extra_indent** (`int`): Additional indentation level for console messages.
-
-        ### Notes
-        - Prevents starting a new extraction if a writer process is already running.
-        - Prompts the user interactively for missing parameters unless provided.
-        - Automatically creates missing output directories and log files.
-        - Saves extraction metadata to a YAML file alongside the CSV output.
-        - Displays process details including PID, start time, duration, and assigned data sources.
-        """
-
+ 
         # Prevent starting if a writer process is already running
         if self.writer_process.is_alive():
             self.vt.console_message(
@@ -358,17 +338,20 @@ class DataEx:
 
         self.vt.console_message("title", "Starting extraction", "📈", logger=logger, indent=extra_indent)
 
-        # Prompt user for suffix and duration if not provided
-        if suffix_out is None:
-            suffix: str = Prompt.ask("📁 Enter a suffix for the output CSV file", default="metrics")
+        # Prompt user for output filename and duration if not provided
+        if csv_fn_out is None:
+            fn: str = Prompt.ask("📁 Enter a filename for the output CSV file", default="metrics")
             duration: int = IntPrompt.ask("⏱️ Enter duration in seconds", default=60)
+            self.csv_output_filepath = self.output_dir / f"{fn}.csv"
+            self.yaml_output_filepath = self.output_dir / f"{fn}.yaml"
         else:
-            suffix = suffix_out
             duration = duration_out if duration_out is not None else 60
+            self.csv_output_filepath = csv_fn_out
+            self.yaml_output_filepath = yaml_fn_out
 
-        # Update output directory if provided
-        if dir_out is not None:
-            self.output_dir = Path(dir_out)
+        # Create output file path with timestamp
+        self.csv_output_filepath.parent.mkdir(exist_ok=True, parents=True)
+        self.yaml_output_filepath.parent.mkdir(exist_ok=True, parents=True)
 
         # Record start time and calculate planned end time
         self.start_time = time.time()
@@ -376,11 +359,6 @@ class DataEx:
         self.duration = duration
         planned_end_time = self.start_time + self.duration
         planned_end_time_hr = datetime.datetime.fromtimestamp(planned_end_time).strftime("%d-%m-%Y %H:%M:%S")
-
-        # Create output file path with timestamp
-        output_filepath = self.output_dir / f"{suffix}.csv"
-        output_filepath.parent.mkdir(exist_ok=True, parents=True)
-        self.output_filepath = str(output_filepath)
 
         # Prepare data source configurations for the writer process
         source_configs = [
@@ -405,14 +383,13 @@ class DataEx:
             "finished_at_planned": planned_end_time_hr
         }
 
-        extractor_output_filepath = self.output_dir / f"{suffix}.yaml"
-        with open(extractor_output_filepath, "w") as file:
+        with open(self.yaml_output_filepath, "w") as file:
             yaml.dump(extractor_output, file, sort_keys=False, default_flow_style=False, allow_unicode=True)
 
         # Launch the writer process
         self.writer_process = multiprocessing.Process(
             target=self.write_metrics,
-            args=(output_filepath, extractor_output_filepath, duration, source_configs)
+            args=(duration, source_configs)
         )
         self.writer_process.start()
 
@@ -427,8 +404,6 @@ class DataEx:
 # ─────────────────────────────────────────────────────────────────────────────
     def write_metrics(
         self,
-        output_filepath: Path,
-        extractor_output_filepath: Path,
         duration: int,
         source_configs: List[Dict[str, Any]],
         logger=None,
@@ -442,8 +417,6 @@ class DataEx:
         Upon completion, metadata is appended to a YAML summary file.
 
         ### Args
-        - **output_filepath** (`Path`): Path to the output CSV file.
-        - **extractor_output_filepath** (`Path`): Path to the YAML metadata file.
         - **duration** (`int`): Duration of the extraction process in seconds.
         - **source_configs** (`List[Dict[str, Any]]`): Configuration for each data source.
         - **logger**: Optional logger instance for logging messages.
@@ -488,7 +461,7 @@ class DataEx:
                 )
 
         # Open CSV file and write header
-        with output_filepath.open("w", newline="", buffering=1) as file:
+        with self.csv_output_filepath.open("w", newline="", buffering=1) as file:
             writer = csv.writer(file)
             writer.writerow(["timestamp", "metric", "value"])
 
@@ -514,7 +487,7 @@ class DataEx:
                 extractor_output = {
                     "finished_at": stop_time_hr,
                 }
-                with extractor_output_filepath.open("a") as file:
+                with self.yaml_output_filepath.open("a") as file:
                     yaml.dump(extractor_output, file, sort_keys=False, default_flow_style=False, allow_unicode=True)
 
 
@@ -565,7 +538,7 @@ class DataEx:
             self.vt.console_message("info", "Writer process is not running.", indent=1 + extra_indent, logger=logger)
 
         # Reset extraction session state
-        self.output_filepath = None
+        self.csv_output_filepath = None
         self.start_time = None
         self.duration = None
 
@@ -612,7 +585,7 @@ class DataEx:
             return
 
         # Stream the real-time log output
-        log_path: Path = Path(self.output_filepath) if self.output_filepath else Path()
+        log_path: Path = Path(self.csv_output_filepath) if self.csv_output_filepath else Path()
         self.vt.real_time_log(log_path)
 
 

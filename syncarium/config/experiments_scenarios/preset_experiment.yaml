@@ -64,6 +64,8 @@ dataex_datasources:
 # EXPERIMENT PARAMETERS
 synccore_start: -1
 synccore_stop_at_end: false
-loadgen_stl_start: 0
+loadgen_stl_start: -1
 dataex_start: 10
-total_duration: 120
+total_duration: 30
+output_filepath: "Ly3_PresetExperiment"
+

@@ -7,7 +7,7 @@
 **Description**: Load Generator configurations for TUI  
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada  
 **Created**: 2025-05-28  
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **License**: GPLv3
 """
 
@@ -505,8 +505,8 @@ class LoadGen:
     def start_stl_program(
         self,
         file_cfg: Optional[Path] = None,
-        labt_duration: Optional[int] = None,
-        labt_output: Optional[str] = None,
+        stl_duration: Optional[int] = None,
+        stl_output: Optional[str] = None,
         logger=None,
         extra_indent: int = 0
     ) -> None:
@@ -519,8 +519,8 @@ class LoadGen:
 
         ### Args:
         - **file_cfg** (`Optional[str]`): Name of the YAML configuration file. If `None`, the user is prompted to select one.
-        - **labt_duration** (`Optional[int]`): Optional override for the duration of the STL program.
-        - **labt_output** (`Optional[str]`): Optional output path or identifier for the STL program.
+        - **stl_duration** (`Optional[int]`): Optional override for the duration of the STL program.
+        - **stl_output** (`Optional[str]`): Optional output path or identifier for the STL program.
         - **logger**: Logger instance used for logging messages. Defaults to `None`.
         - **extra_indent** (`int`): Additional indentation level for console messages. Defaults to `0`.
         """
@@ -573,11 +573,11 @@ class LoadGen:
         self.stl_filename: Optional[str] = stl.get("loadgen_stl_program")
 
         # Build STL arguments
-        if labt_duration and labt_output:
-            self.stl_duration = labt_duration
+        if stl_duration and stl_output:
+            self.stl_duration = stl_duration
             self.stl_args = [str(self.stl_duration)] + [
                 str(value) for value in stl.get("loadgen_stl_args", {}).values()
-            ] + [str(labt_output)]
+            ] + [str(stl_output)]
         else:
             self.stl_duration = stl.get("loadgen_stl_args", {}).get("duration")
             self.stl_args = [

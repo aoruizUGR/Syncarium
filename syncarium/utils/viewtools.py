@@ -7,7 +7,7 @@
 **Description**: User Interface utilities for TUI.  
 **Author**: PhD Student Alberto Ortega Ruiz, PhD Student Víctor Vázquez, University of Granada  
 **Created**: 2025-05-22  
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **License**: GPLv3
 """
 
@@ -29,6 +29,7 @@ import yaml
 import locale
 from pathlib import Path
 from typing import Optional, List, Any
+from typing import Deque
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Third-Party Imports
@@ -43,8 +44,8 @@ from InquirerPy import inquirer, get_style
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-from syncarium.utils import SysAuxiliar
 import syncarium.options.global_vars as global_vars
+from syncarium.utils import SysAuxiliar
 
 # ─────────────────────────────────────────────────────────────
 # 🖥️ View Tools Class
@@ -345,8 +346,7 @@ class ViewTools:
         self,
         start_time: float,
         duration: int,
-        message: str,
-        repetition_info: Optional[int]
+        message: str
     ) -> None:
         """
         Displays a real-time progress bar for the duration of a running process.
@@ -377,7 +377,6 @@ class ViewTools:
                 console=self.console,
                 transient=True
             ) as progress:
-                message = message + (f" ({repetition_info})" if repetition_info else "")
                 task = progress.add_task(message, total=total_seconds)
                 self.console_message("info", "Press Ctrl+C to exit.")
 
@@ -502,9 +501,9 @@ class ViewTools:
             self.console_message("error",f"Error retrieving namespaces: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 🧮 Function: table_synccore_processes
+# 🧮 Function: table_local_synccore_processes
 # ─────────────────────────────────────────────────────────────────────────────   
-    def table_synccore_processes(self) -> None:
+    def table_local_synccore_processes(self) -> None:
         """
         Displays a table of currently running PTP (Precision Time Protocol) processes.
 
@@ -512,6 +511,62 @@ class ViewTools:
         such as PID, start time, command line, and stdout redirection path. If no processes
         are found, a warning panel is shown.
         """
+
+        # Run pgrep to find all running ptp4l processes with full command line
+        result = subprocess.run(["sudo","pgrep", "-a", "ptp4l"], capture_output=True, text=True)
+        lines = result.stdout.strip().splitlines()
+
+        # If no processes are found, show a warning panel
+        if not lines:
+            self.console.print(Panel.fit(
+                "[bold yellow]No local PTP processes have been started or are currently running.[/bold yellow]",
+                title="⏱️ PTP Local Processes Status",
+                border_style="red"
+            ))
+            return
+
+        # Create a rich table to display process information
+        table = Table(
+            title="⏱️ PTP Local Processes Status",
+            show_header=True,
+            header_style="bold cyan",
+            title_justify="left",
+        )
+        table.add_column("PID", justify="center", overflow="fold")
+        table.add_column("Start Time", justify="center", overflow="fold")
+        table.add_column("Command", justify="left", overflow="fold")
+        table.add_column("Stdout Redirection", justify="left", overflow="fold")
+
+        # Populate the table with process details
+        for line in lines:
+            pid, *cmd = line.split()
+            cmd_str = " ".join(cmd)
+
+            # Get process start time
+            start_time = datetime.datetime.strptime(
+                subprocess.run(
+                    ["sudo", "ps", "-p", pid, "-o", "lstart="], capture_output=True, text=True
+                ).stdout.strip().replace("  ", " "), "%a %b %d %H:%M:%S %Y"
+            ).strftime("%d-%m-%Y %H:%M:%S")
+
+
+
+            # Get stdout redirection path (if any)
+            stdout_path = subprocess.run(
+                ["sudo", "readlink", f"/proc/{pid}/fd/1"],
+                capture_output=True,
+                text=True
+            ).stdout.strip() or "N/A"
+
+            table.add_row(pid, start_time, cmd_str, stdout_path)
+
+        # Print the table to the console
+        self.console.print(table)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🧮 Function: table_external_synccore_processes
+# ─────────────────────────────────────────────────────────────────────────────   
+    def table_external_synccore_processes(self) -> None:
 
         # Run pgrep to find all running ptp4l processes with full command line
         result = subprocess.run(["sudo","pgrep", "-a", "ptp4l"], capture_output=True, text=True)
@@ -656,7 +711,7 @@ class ViewTools:
             self.console_message("error",f"Error running dpdk_nic_bind.py: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 🧮 Function: table_tgen
+# 🧮 Function: table_loadgen
 # ─────────────────────────────────────────────────────────────────────────────   
     def table_loadgen(self) -> None:
         """
@@ -904,13 +959,13 @@ class ViewTools:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 🧮 Function: table_data_extractor
+# 🧮 Function: table_current_extraction
 # ─────────────────────────────────────────────────────────────────────────────
-    def table_data_extractor(
+    def table_current_extraction(
         self,
         writer_process: multiprocessing.Process,
         data_sources: List[dict],
-        output_file: str,
+        csv_output_filepath: Path,
         start_time: float,
         duration: int
     ) -> None:
@@ -923,7 +978,7 @@ class ViewTools:
         ### Args
         - **writer_process** (`multiprocessing.Process`): Process handling data writing.
         - **data_sources** (`List[dict]`): List of data source configurations.
-        - **output_file** (`str`): Path to the output file.
+        - **csv_output_filepath** (`str`): Path to the csv output file.
         - **start_time** (`float`): Timestamp when the extraction started.
         - **duration** (`int`): Duration of the extraction in seconds.
         """
@@ -944,78 +999,45 @@ class ViewTools:
             header_style="bold cyan",
             title_justify="left"
         )
-        table.add_column("Output HashID", justify="center", overflow="fold")
         table.add_column("PID", justify="center", overflow="fold")
         table.add_column("Start Time", justify="center", overflow="fold")
         table.add_column("Duration", justify="center", overflow="fold")
         table.add_column("Sources", justify="center", overflow="fold")
+        table.add_column("CSV Output File", justify="center", overflow="fold")
 
         # Format values for display
         pid = str(writer_process.pid)
-        hash_id = os.path.splitext(os.path.basename(output_file))[0].split("_")[-1]
         start = datetime.datetime.fromtimestamp(start_time).strftime("%d-%m-%Y %H:%M:%S") if start_time else "N/A"
         duration = str(datetime.timedelta(seconds=duration)) if duration else "N/A"
         sources = ", ".join(s["name"] for s in data_sources) if data_sources else "—"
+        csv_output_file = str(csv_output_filepath)
 
         # Add a row with the current extraction status
-        table.add_row(hash_id, pid, start, duration, sources)
+        table.add_row(pid, start, duration, sources, csv_output_file)
 
         # Print the table to the console
         self.console.print(table)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 🧮 Function: table_experiment
+# 🧮 Function: table_experiment_queue
 # ─────────────────────────────────────────────────────────────────────────────
-    def table_experiment(
-        self,
-        exp_fn: str,
-        exp_state: str,
-        exp_id: str,
-        exp_duration: int,
-        exp_start_ts: float,
-        exp_ptp_clients: str,
-        exp_ptp_ts: int,
-        exp_stl_fn: str,
-        exp_stl_ts: int,
-        exp_dext_datasources: str,
-        exp_dext_ts: int
-    ) -> None:
-        """
-        Displays a table summarizing the current experiment's status and associated files.
-
-        Shows metadata including experiment ID, name, state, duration, start time,
-        and associated PTP, STL, and DEXT components with their respective start times.
-
-        ### Args
-        - **exp_fn** (`str`): Name of the experiment.
-        - **exp_state** (`str`): Current state of the experiment (e.g., `"Running"`, `"Completed"`).
-        - **exp_id** (`str`): Unique identifier (HashID) of the experiment.
-        - **exp_duration** (`int`): Total duration of the experiment in seconds.
-        - **exp_start_ts** (`float`): Timestamp when the experiment started.
-        - **exp_ptp_clients** (`str`): Comma-separated list of PTP client names.
-        - **exp_ptp_ts** (`int`): Start time (in seconds) of the PTP process.
-        - **exp_stl_fn** (`str`): Filename of the STL file.
-        - **exp_stl_ts** (`int`): Start time (in seconds) of the STL process.
-        - **exp_dext_datasources** (`str`): Comma-separated list of DEXT data sources.
-        - **exp_dext_ts** (`int`): Start time (in seconds) of the DEXT process.
-        """
-
-        if not exp_id:
-            # Show a warning if no experiment is loaded or running
+    def table_experiment_queue(self, queue: Deque[Any]) -> None:
+        if len(queue) == 0:
             self.console.print(Panel.fit(
-                "[bold yellow]No experiment loaded or running.[/bold yellow]",
-                title="🧪 Laboratory Status",
+                "[bold yellow]Empty experiment queue.[/bold yellow]",
+                title="🧪 Laboratory FIFO Queue",
                 border_style="red"
             ))
             return
 
-        # Create and configure the table
         table = Table(
-            title="🧪 Laboratory Status",
+            title="🧪 Laboratory FIFO Queue",
             show_header=True,
             header_style="bold cyan",
             title_justify="left"
         )
+        
+        table.add_column("Order", justify="right", style="bold green")
         table.add_column("HashID", justify="center", overflow="fold")
         table.add_column("State", justify="center", overflow="fold")
         table.add_column("Name", justify="center", overflow="fold")
@@ -1025,36 +1047,103 @@ class ViewTools:
         table.add_column("STL File (Start)", justify="center", overflow="fold")
         table.add_column("DEXT Datasources (Start)", justify="center", overflow="fold")
 
-        # Format Duration
-        exp_duration_str = str(datetime.timedelta(seconds=exp_duration))
+        for idx, exp in enumerate(queue, start=1):
+            # Format duration
+            exp_duration_str: str = str(datetime.timedelta(seconds=exp.duration))
 
-        # Format Start Timestamp
-        if exp_start_ts:
-            exp_start_ts_str = datetime.datetime.fromtimestamp(exp_start_ts).strftime("%d-%m-%Y %H:%M:%S")
+            # Format start timestamp
+            if exp.start_ts:
+                exp_start_ts_str: str = datetime.datetime.fromtimestamp(exp.start_ts).strftime("%d-%m-%Y %H:%M:%S")
+            else:
+                exp_start_ts_str = "Not started yet"
+
+            # Format STL
+            if exp.stl_start == -1:
+                exp_stl_fn_str = f"{exp.stl_fn} (NOT)"
+            else:
+                exp_stl_fn_str = f"{exp.stl_fn} ({str(datetime.timedelta(seconds=exp.stl_start))})"
+
+            # Format PTP
+            if exp.synccore_start == -1:
+                exp_ptp_fn_str = ", ".join(exp.synccore_clients) + " (NOT)"
+            else:
+                exp_ptp_fn_str = ", ".join(exp.synccore_clients) + f" ({str(datetime.timedelta(seconds=exp.synccore_start))})"
+
+            # Format DEXT
+            exp_dext_fn_str = ", ".join(exp.dataex_datasources) + f" ({str(datetime.timedelta(seconds=exp.dataex_start))})"
+
+            # Add row
+            table.add_row(
+                str(idx),
+                exp.hash_id,
+                exp.state,
+                exp.fn,
+                exp_duration_str,
+                exp_start_ts_str,
+                exp_ptp_fn_str,
+                exp_stl_fn_str,
+                exp_dext_fn_str
+            )
+
+        self.console.print(table)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🧮 Function: table_current_experiment
+# ─────────────────────────────────────────────────────────────────────────────
+    def table_current_experiment(self, exp: Any) -> None:
+        if exp == None:
+            self.console.print(Panel.fit(
+                "[bold yellow]No experiment running currently.[/bold yellow]",
+                title="🧪 Laboratory Status",
+                border_style="red"
+            ))
+            return
+
+        table = Table(
+            title="🧪 Experiment running",
+            show_header=True,
+            header_style="bold cyan",
+            title_justify="left"
+        )
+        
+        table.add_column("HashID", justify="center", overflow="fold")
+        table.add_column("State", justify="center", overflow="fold")
+        table.add_column("Name", justify="center", overflow="fold")
+        table.add_column("Duration", justify="center", overflow="fold")
+        table.add_column("Start Time", justify="center", overflow="fold")
+        table.add_column("PTP Clients (Start)", justify="center", overflow="fold")
+        table.add_column("STL File (Start)", justify="center", overflow="fold")
+        table.add_column("DEXT Datasources (Start)", justify="center", overflow="fold")
+
+        # Format duration
+        exp_duration_str: str = str(datetime.timedelta(seconds=exp.duration))
+
+        # Format start timestamp
+        if exp.start_ts:
+            exp_start_ts_str: str = datetime.datetime.fromtimestamp(exp.start_ts).strftime("%d-%m-%Y %H:%M:%S")
         else:
             exp_start_ts_str = "Not started yet"
 
         # Format STL
-        if exp_stl_ts == -1:
-            exp_stl_fn_str = f"{exp_stl_fn} (NOT)"
+        if exp.stl_start == -1:
+            exp_stl_fn_str = f"{exp.stl_fn} (NOT)"
         else:
-            exp_stl_fn_str = f"{exp_stl_fn} ({str(datetime.timedelta(seconds=exp_stl_ts))})"
-        
+            exp_stl_fn_str = f"{exp.stl_fn} ({str(datetime.timedelta(seconds=exp.stl_start))})"
+
         # Format PTP
-        if exp_ptp_ts == -1:
-            exp_ptp_fn_str = ", ".join(exp_ptp_clients) + " (NOT)"
+        if exp.synccore_start == -1:
+            exp_ptp_fn_str = ", ".join(exp.synccore_clients) + " (NOT)"
         else:
-            exp_ptp_fn_str = ",".join(exp_ptp_clients) + f" ({str(datetime.timedelta(seconds=exp_ptp_ts))})"
+            exp_ptp_fn_str = ", ".join(exp.synccore_clients) + f" ({str(datetime.timedelta(seconds=exp.synccore_start))})"
 
         # Format DEXT
-        exp_dext_fn_str = ",".join(exp_dext_datasources) + f" ({str(datetime.timedelta(seconds=exp_dext_ts))})"
+        exp_dext_fn_str = ", ".join(exp.dataex_datasources) + f" ({str(datetime.timedelta(seconds=exp.dataex_start))})"
 
-
-        # Add a row with the current experiment status
+        # Add row
         table.add_row(
-            exp_id,
-            exp_state,
-            exp_fn,
+            exp.hash_id,
+            exp.state,
+            exp.fn,
             exp_duration_str,
             exp_start_ts_str,
             exp_ptp_fn_str,
@@ -1062,8 +1151,9 @@ class ViewTools:
             exp_dext_fn_str
         )
 
-        # Print the table to the console
         self.console.print(table)
+
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🪟 Function: panel_platform_info

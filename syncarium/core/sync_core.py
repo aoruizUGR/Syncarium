@@ -7,7 +7,7 @@
 **Description**: Synchronization Core for TUI  
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada  
 **Created**: 2025-05-22  
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **License**: GPLv3
 """
 
@@ -109,7 +109,7 @@ class SyncCore:
                 self.vt.console_message("main_title", "Synchronization Core Menu", "⏱️")
 
                 # Render a table of active PTP processes
-                self.vt.table_synccore_processes()
+                self.vt.table_local_synccore_processes()
 
                 # Prompt user with interactive menu
                 choice: str = self.vt.console_select_menu(
