@@ -28,6 +28,8 @@ Syncarium enables:
 ```bash
 git clone https://github.com/aoruizUGR/syncarium.git
 
+cd Syncarium/
+
 pip install -r requirements.txt
 ```
 
@@ -44,38 +46,45 @@ python -m syncarium.main
 ## 📁 Project Structure
 
 ```
-syncarium/
+syncarium/                              # Project root
 │
-├── config/                         # Configuration templates for program components
-│   ├── datasources_scenarios/      # Templates for data sources
-│   ├── dpdk_profiles/              # Templates for DPDK profiles
-│   ├── experiments_scenarios/      # Templates for experiment scenarios
-│   ├── load_scenarios/             # Templates for load generation scenarios
-│   ├── namespaces_scenarios/       # Templates for namespace scenarios
-│   ├── ntp_profiles/               # Templates for NTP profiles
-│   └── ptp_profiles/               # Templates for PTP profiles
+├── docs/                               # Documentation
 │
-├── logs/           # Temporary log files
-├── options/        # Global configurable options for program execution
-├── output/         # Syncarium outputs
-├── scripts/        # Shell scripts for OS tasks
-├── submodules/     # External submodules
-├── tui/            # Program's TUI
-│   ├── core/       # Program core
-│   └── utils/      # Utilities for program execution
+├── submodules/                         # Submodules Links
+│   ├── dpdk/                           
+│   ├── linuxptp/                       
+│   └── TimeStick/                      
 │
-├── main.py             # Program entrypoint
-├── __init__.py         # Entrypoint module
-├── requirements.txt    # Dependencies
-└── README.md           # This file
+├── syncarium/                          # Program
+│   ├── config/                         # Scenarios examples
+│   ├── core/                           # Program core
+│   │   ├── dsources/                   # Datasources
+│   │   ├── data_ex.py                  # Data extractor
+│   │   ├── exp_orchestra.py            # Experiment orchestration
+│   │   ├── experiment.py               # Experiment
+│   │   ├── load_gen.py                 # Load Generator
+│   │   └── sync_core.py                # Syncronization core
+│   │
+│   ├── options/                        # Configurable global and private vars
+│   ├── scripts/                        # Shell scripts
+│   ├── utils/
+│   │   ├── sysaux.py                   # Auxiliar system functions
+│   │   ├── telegram.py                 # Telegram Bot Notifications
+│   │   └── viewtools.py                # Rich and visual auxiliar functions
+│   │
+│   ├── main.py                         # Program entrypoint
+│   └── tui.py                          # Textual User Interface
+│
+├── requirements.txt                    # Dependencies
+└── README.md                           # This file
 ```
 
 ---
 
 ## 🖥️ Compatible Environment
 
-- Operating System: **Linux**
-- Recommended Distribution: **Ubuntu** (tested)
+- Operating System: **Linux 6.8.0-85-generic**
+- Recommended Distribution: **Ubuntu 24.04.2 LTS** (tested)
 
 ---
 
@@ -91,6 +100,7 @@ This software is distributed under the **GPL-3.0** license. You can find it in t
 
 - [DPDK - Data Plane Development Kit](https://github.com/DPDK/dpdk)
 - [OCP-Times Appliances Project - TimeStick](https://github.com/Time-Appliances-Project/TimeStick)
+- [LinuxPTP](https://github.com/richardcochran/linuxptp)
 
 ---
 
