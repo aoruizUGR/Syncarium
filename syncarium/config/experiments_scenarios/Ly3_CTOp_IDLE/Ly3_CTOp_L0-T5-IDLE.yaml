@@ -17,6 +17,8 @@ namespaces:
     IP/mask:        "10.104.0.10/24"
     gateway:        "10.104.0.1"
     interface:      "enp112s0f0np0"
+    pps_interface:  "enp112s0f0np0"
+    pps_sma:        "SMA2"
     pps_mode:       "OUT"
 
 # PTP PARAMETERS

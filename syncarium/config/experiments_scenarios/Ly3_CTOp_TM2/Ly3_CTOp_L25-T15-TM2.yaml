@@ -67,4 +67,4 @@ synccore_stop_at_end: false
 loadgen_stl_start: 0
 dataex_start: 60
 total_duration: 960
-output_filepath: "Ly3_CTOp_TM2/Ly3_CTOp_L25-T15-TM2"
+output_filepath: "Ly3_CTOp_TM3/Ly3_CTOp_L25-T15-TM2"

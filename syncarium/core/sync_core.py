@@ -338,7 +338,7 @@ class SyncCore:
             # Build ptp4l command
             command: list[str] = [
                 "ip", "netns", "exec", namespace,
-                "ptp4l", "-f", str(config_path), "-s", "-q", "-m", "0"
+                "/home/aoruiz/linuxptp-3.1.1/ptp4l", "-f", str(config_path), "-H", "-q", "-m"
             ]
 
             try:

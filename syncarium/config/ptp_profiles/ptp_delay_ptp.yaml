@@ -1,0 +1,9 @@
+ptp_clients:
+  Intel810_server:
+    config: preset_master.conf
+    namespace: Intel810_server_ns
+    interface: enp112s0f0np0
+  Intel810_client:
+    config: Intel810.conf
+    namespace: Intel810_client_ns
+    interface: enp112s0f2np2

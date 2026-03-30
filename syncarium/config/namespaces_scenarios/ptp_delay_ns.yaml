@@ -1,0 +1,17 @@
+namespaces:
+  Intel810_server_ns:
+    hardware:       "Intel810"
+    IP/mask:        "10.101.0.11/24"
+    gateway:        "10.101.0.1"
+    interface:      "enp112s0f0np0"
+    pps_interface:  "enp112s0f0np0"
+    pps_sma:        "SMA1"
+    pps_mode:       "IN"
+  Intel810_client_ns:
+    hardware:       "Intel810"
+    IP/mask:        "10.104.0.10/24"
+    gateway:        "10.104.0.1"
+    interface:      "enp112s0f2np2"
+    pps_interface:  "enp112s0f0np0"
+    pps_sma:        "SMA2"
+    pps_mode:       "OUT"

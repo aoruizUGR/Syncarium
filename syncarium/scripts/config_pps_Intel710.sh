@@ -8,7 +8,7 @@ INTERFACE=$2
 MODE=$3
 
 # Get the PTP device number associated with the interface
-PTP_DEVICE=$(sudo ip netns exec $NAMESPACE ethtool -T "$INTERFACE" 2>/dev/null | awk -F': ' '/PTP Hardware Clock:/ {print $2}')
+PTP_DEVICE=$(sudo ethtool -T "$INTERFACE" 2>/dev/null | awk -F': ' '/PTP Hardware Clock:/ {print $2}')
 
 # Verify a valid PTP_DEVICE number
 if [[ -n "$PTP_DEVICE" && "$PTP_DEVICE" =~ ^[0-9]+$ ]]; then

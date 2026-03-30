@@ -344,6 +344,8 @@ class PlatInit:
         if not self.load_namespaces(file_cfg):
             self.vt.console_message("error", "Aborting operation due to failed configuration loading.", indent=1)
             return
+        
+        self.config_pps_io()
 
         self.vt.console_message("title", "Start Linux Namespaces", "🌐")
 
@@ -402,7 +404,7 @@ class PlatInit:
         - **ask_confirm** (`bool`): Whether to prompt the user for confirmation before stopping namespaces.  
         Defaults to `True`.
         """
-
+        
         # Show section title
         self.vt.console_message("title", "Stopping Linux Namespaces", "🛑")
 
@@ -442,79 +444,134 @@ class PlatInit:
 # ─────────────────────────────────────────────────────────────────────────────
     def config_pps_io(self) -> None:
         """
-        Configures PPS (Pulse Per Second) I/O for a selected network namespace.
+        Configures PPS (Pulse Per Second) I/O for ALL loaded namespaces.
 
-        The user selects a namespace from the loaded configuration. PPS settings are applied
-        based on the detected hardware type.
+        Instead of asking the user to choose one namespace, this version iterates
+        over each namespace loaded in self.loaded_namespaces and applies the PPS
+        configuration according to its hardware type.
 
-        ### Supported Hardware:
-        - **OCP-TAP TimeStick**: No configuration required. PPS operates in OUT mode by default.
-        - **Intel 710**: Uses `config_pps_Intel710.sh`.
-        - **Intel 810**: Uses `config_pps_Intel810.sh`.
-
-        For Intel hardware, the configuration script is executed with the namespace name,
-        interface, and PPS mode as arguments.
+        Supported hardware:
+        - OCP-TAP TimeStick  (no configuration needed)
+        - Intel 710          (uses config_pps_Intel710.sh)
+        - Intel 810          (uses config_pps_Intel810.sh)
         """
 
-        # Show section title
-        self.vt.console_message("title", "Configure PPS I/O", "📍")
+        self.vt.console_message("title", "Configure PPS I/O on ALL namespaces", "📍")
 
-        # Ensure namespaces are loaded
         if not self.loaded_namespaces:
             self.vt.console_message(
                 "caution",
-                "PPS I/O Configuration only works on namespaces started from this ",
+                "No namespaces loaded. Start namespaces before configuring PPS I/O.",
                 indent=1
             )
             return
 
         try:
-            # Build menu choices from namespace names
-            choices: list[Dict[str, str]] = [
-                {"name": config.get("name", key), "value": key}
-                for key, config in self.loaded_namespaces.items()
-            ]
-        
-            # Prompt user to select a namespace
-            selected_ns_key: str = self.vt.console_select_menu(
-                choices=choices,
-                message="Select a namespace to configure PPS I/O:",
-                indent=1
-            )
+            # Iterate over each namespace
+            for ns_key, ns_cfg in self.loaded_namespaces.items():
 
-            # Retrieve selected namespace configuration
-            selected_ns: Dict = self.loaded_namespaces[selected_ns_key]
-            hw_type: Optional[str] = selected_ns.get("hardware")
+                self.vt.console_message("info", f"Processing namespace: {ns_key}", indent=1)
+                hw_type: Optional[str] = ns_cfg.get("hardware")
 
-            if hw_type == "OCP-TAP_TimeStick":
-                # No configuration needed for this hardware
-                self.vt.console_message("info", "No additional configuration is needed for OCP-TAP TimeStick hardware.", indent=1)
-                self.vt.console_message("info", "PPS working on mode OUT (by default) in OCP-TAP TimeStick.", indent=1)
+                # ──────────────────────────────
+                # OCP-TAP TimeStick
+                # ──────────────────────────────
+                if hw_type == "OCP-TAP_TimeStick":
+                    self.vt.console_message(
+                        "info",
+                        "OCP-TAP TimeStick detected → PPS OUT mode enabled by default. No script execution needed.",
+                        indent=2,
+                    )
+                    continue
+                # ──────────────────────────────
+                # Intel 710
+                # ──────────────────────────────
+                elif hw_type == "Intel710":
+                    pps_mode: Optional[str] = ns_cfg.get("pps_mode")
+                    pps_interface: Optional[str] = ns_cfg.get("interface")
 
-            elif hw_type in ["Intel710", "Intel810"]:
-                # Extract required parameters
-                pps_mode: Optional[str] = selected_ns.get("pps_mode")
-                interface: Optional[str] = selected_ns.get("interface")
+                    if not (pps_mode and pps_interface):
+                        self.vt.console_message(
+                            "error",
+                            f"Missing PPS parameters in namespace {ns_key}. Skipping.",
+                            indent=2
+                        )
+                        continue                    
+                    
+                    self.vt.console_message(
+                        "info",
+                        f"{hw_type} detected → Configuring PPS (SMA1 {pps_mode}) on {pps_interface}.",
+                        indent=2,
+                    )
 
-                self.vt.console_message("info", f"PPS I/O configuration for {hw_type} hardware:", indent=1)
-                self.vt.console_message("info", f"Using PPS mode: {pps_mode} in {hw_type}.", indent=1)
+                    script_path: Path = Path(self.scripts_dir) / f"config_pps_{hw_type}.sh"
 
-                # Determine script path
-                script_path: Path = Path(self.scripts_dir) / f"config_pps_{hw_type}.sh"
+                    # Ensure script is executable
+                    subprocess.run(["chmod", "a+x", script_path], check=True)
 
-                # Make the script executable
-                subprocess.run(["chmod", "a+x", script_path], check=True)
+                    cmd: list[str] = [str(script_path), ns_key, pps_interface, pps_mode]
 
-                # Build and run the configuration command
-                cmd: list[str] = [str(script_path), selected_ns_key, interface, pps_mode]
-                self.vt.console_message("info", f"Running: {' '.join(cmd)}", indent=1)
+                    self.vt.console_message("info", f"Running: {' '.join(cmd)}", indent=2)
 
-                try:
-                    subprocess.run(cmd, check=True)
-                    self.vt.console_message("success", "PPS Configured successfully.", indent=2)
-                except subprocess.CalledProcessError as e:
-                    self.vt.console_message("error", f"Error executing the script: {e}.", indent=2)
+                    try:
+                        subprocess.run(cmd, check=True)
+                        self.vt.console_message("success", f"PPS configured successfully for {ns_key}.", indent=3)
+
+                    except subprocess.CalledProcessError as e:
+                        self.vt.console_message(
+                            "error",
+                            f"Error running PPS script for {ns_key}: {e}",
+                            indent=3
+                        )
+                # ──────────────────────────────
+                # Intel 810
+                # ──────────────────────────────
+                elif hw_type == "Intel810":
+
+                    pps_sma: Optional[str] = ns_cfg.get("pps_sma")
+                    pps_mode: Optional[str] = ns_cfg.get("pps_mode")
+                    pps_interface: Optional[str] = ns_cfg.get("pps_interface")
+
+                    if not (pps_sma and pps_mode and pps_interface):
+                        self.vt.console_message(
+                            "error",
+                            f"Missing PPS parameters in namespace {ns_key}. Skipping.",
+                            indent=2
+                        )
+                        continue
+
+                    self.vt.console_message(
+                        "info",
+                        f"{hw_type} detected → Configuring PPS ({pps_sma} {pps_mode}) on {pps_interface}.",
+                        indent=2,
+                    )
+
+                    script_path: Path = Path(self.scripts_dir) / f"config_pps_{hw_type}.sh"
+
+                    # Ensure script is executable
+                    subprocess.run(["chmod", "a+x", script_path], check=True)
+
+                    cmd: list[str] = [str(script_path), pps_interface, str(pps_sma), pps_mode]
+
+                    self.vt.console_message("info", f"Running: {' '.join(cmd)}", indent=2)
+
+                    try:
+                        subprocess.run(cmd, check=True)
+                        self.vt.console_message("success", f"PPS configured successfully for {ns_key}.", indent=3)
+
+                    except subprocess.CalledProcessError as e:
+                        self.vt.console_message(
+                            "error",
+                            f"Error running PPS script for {ns_key}: {e}",
+                            indent=3
+                        )
+
+                else:
+                    self.vt.console_message(
+                        "caution",
+                        f"Unknown hardware type '{hw_type}' in namespace {ns_key}. Skipping.",
+                        indent=2
+                    )
 
         except KeyboardInterrupt:
-            # Handle cancellation
             self.vt.console_message("caution", "Operation cancelled by user.")

@@ -1,8 +1,19 @@
+# E1 Example
 loadgen_stl_program: "stl_Ly3_E1.py"
 loadgen_stl_args:
-  duration: 60
-  load_percentage: 50
-  traffic_model: "TM1"
+  duration: 120
+  load_percentage: 70
+  traffic_model: "SPTM"
   port_list: "[0,1,2,3,4,5,6,7]"
   output_filename: "-"
 
+# E2 Example
+#loadgen_stl_program: "stl_Ly3_E.py"
+#loadgen_stl_args:
+#  duration: 120
+#  load_percent_min: 25
+#  load_percent_max: 75
+#  cycles: 2
+#  traffic_model: "TM1"
+#  port_list: "[0,1,2,3,4,5,6,7]"
+#  output_filename: "-"

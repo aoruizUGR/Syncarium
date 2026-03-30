@@ -227,8 +227,7 @@ class ExpOrchestra:
                 return
 
         try:
-           
-            repetitions = int(self.vt.console.input("Enter number of repetitions:"))
+            repetitions = int(self.vt.console.input("Enter number of repetitions [1]: ") or 1)
             for _ in range(repetitions):
                 experiment = Experiment(file_cfg=filepath_cfg)
                 self.queue.append(experiment)
