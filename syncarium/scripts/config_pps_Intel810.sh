@@ -1,6 +1,6 @@
 #!/bin/bash
 # Usage:
-#   sudo ./config_sma_e810.sh <interface> <SMA1|SMA2> <IN|OUT>
+#   sudo ./config_pps_Intel810.sh <interface> <SMA1|SMA2> <IN|OUT>
 
 INTERFACE=$1
 SMA=$2          # SMA1 or SMA2

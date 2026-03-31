@@ -39,8 +39,8 @@ ptp_clients:
 # TGEN STL PARAMETERS
 loadgen_stl_program: "stl_Ly3_E1.py"
 loadgen_stl_args:
-  load_percentage: 0
-  traffic_model: "TM1"
+  load_percentage: 25
+  traffic_model: "SPTM"
   port_list: "[0,1,2,3,4,5,6,7]"
 
 # DEXT PARAMETERS
@@ -64,9 +64,9 @@ dataex_datasources:
     cable_delays: [0,0,0]
 
 # EXPERIMENT PARAMETERS
-synccore_start: 660
-synccore_stop_at_end: true
-loadgen_stl_start: -1
+synccore_start: -1
+synccore_stop_at_end: false
+loadgen_stl_start: 0
 dataex_start: 60
 total_duration: 3660
-output_filepath: "Ly3_CTStab/Ly3_CTStab_L25-T60-IDLE"
+output_filepath: "Ly3_CTOp_SPTM/Ly3_CTOp_L25-T60-SPTM"
