@@ -7,7 +7,7 @@
 **Description**: Syncarium TUI entry point  
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada  
 **Created**: 2025-05-22  
-**Version**: 1.2.0  
+**Version**: 1.3.0  
 **License**: GPLv3
 """
 
@@ -23,7 +23,7 @@ from rich.console import Console
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
 from syncarium.utils import ViewTools, TelegramBot
-from syncarium.core import PlatInit, SyncCore, LoadGen, DataEx, ExpOrchestra
+from syncarium.core import PlatInit, SyncCore, LoadGen, DataEx, ExpOrchestra, MonHub
 
 
 # ─────────────────────────────────────────────────────────────
@@ -36,16 +36,17 @@ class TuiApp:
 
     This class serves as the main entry point for a TUI application, setting up
     different modules such as Platform Initialization, PTP management, traffic generation,
-    data extraction, and utility functions.
+    data extraction, telemetry monitoring, and utility functions.
 
     ### Attributes:
-    - **console** (`Console`): The console object used for rendering output.
-    - **platinit** (`PlatInit`): Manages Platform Initialization options.
-    - **synccore** (`SyncCore`): Manages the Precision Time Protocol (PTP) menu.
-    - **loadgen** (`LoadGen`): Manages the traffic generator menu.
-    - **dataex** (`DataEx`): Handles the data extraction tool menu.
-    - **exporchestra** (`ExpOrchestra`): Automatization of an experiment.
-    - **vt** (`ViewTools`): Provides utility functions for the TUI.
+- **console** (`Console`): The console object used for rendering output.
+- **platinit** (`PlatInit`): Manages Platform Initialization options.
+- **synccore** (`SyncCore`): Manages the Precision Time Protocol (PTP) menu.
+- **loadgen** (`LoadGen`): Manages the traffic generator menu.
+- **dataex** (`DataEx`): Handles the data extraction tool menu.
+- **monhub** (`MonHub`): Manages telemetry, broker infrastructure, and real-time visualization.
+- **exporchestra** (`ExpOrchestra`): Automatization of an experiment.
+- **vt** (`ViewTools`): Provides utility functions for the TUI.
     """
 
 
@@ -57,7 +58,7 @@ class TuiApp:
         Initializes the TuiApp with an optional custom console.
 
         ### Args:
-        - **console** (`Optional[Console]`): A custom console instance for output.  
+- **console** (`Optional[Console]`): A custom console instance for output.  
         If not provided, a default `Console` instance is used.
         """
 
@@ -76,6 +77,7 @@ class TuiApp:
         self.synccore: SyncCore = SyncCore(self.vt)
         self.loadgen: LoadGen = LoadGen(self.vt)
         self.dataex: DataEx = DataEx(self.vt)
+        self.monhub: MonHub = MonHub(self.vt)
 
         # Laboratory tool depends on other modules
         self.exporchestra: ExpOrchestra = ExpOrchestra(
@@ -98,16 +100,17 @@ class TuiApp:
         It gracefully handles keyboard interruptions (e.g., Ctrl+C).
 
         ### Menu Options:
-        - ⚙️ PlatInit ----- Platform Initialization → `platinit.main_menu`
-        - ⏱️ SyncCore ----- Synchronization Core → `synccore.main_menu`
-        - 🚦 LoadGen ------ Load Generator → `loadgen.main_menu`
-        - 📈 DataEx ------- Data Extractor → `dataex.main_menu`
-        - 🧪 ExpOrchestra - Experiment Orchestration → `exporchestra.main_menu`
-        - 🔄 Refresh View → `vt.refresh_view`
-        - ❌ Exit → `exit`
+- ⚙️ PlatInit ----- Platform Initialization → `platinit.main_menu`
+- ⏱️ SyncCore ----- Synchronization Core → `synccore.main_menu`
+- 🚦 LoadGen ------ Load Generator → `loadgen.main_menu`
+- 📈 DataEx ------- Data Extractor → `dataex.main_menu`
+- 📊 MonHub ------- Monitoring & Telemetry Hub → `monhub.main_menu`
+- 🧪 ExpOrchestra - Experiment Orchestration → `exporchestra.main_menu`
+- 🔄 Refresh View → `vt.refresh_view`
+- ❌ Exit → `exit`
                 
         ### Notes:
-        - Graceful exit is handled via **Ctrl+C**.
+- Graceful exit is handled via **Ctrl+C**.
         """
 
         loop = True
@@ -133,6 +136,7 @@ class TuiApp:
                         {"name": "⏱️ SyncCore ----- Synchronization Core", "value": "synccore"},
                         {"name": "🚦 LoadGen ------ Load Generator", "value": "loadgen"},
                         {"name": "📈 DataEx ------- Data Extractor", "value": "dataex"},
+                        {"name": "📊 MonHub ------- Monitoring & Telemetry Hub", "value": "monhub"},
                         {"name": "🧪 ExpOrchestra - Experiment Orchestration", "value": "exporchestra"},
                         {"name": "🔄 Refresh View", "value": "refresh_view"},
                         {"name": "❌ Exit", "value": "exit"},
@@ -143,9 +147,10 @@ class TuiApp:
                 submenu = {
                     "platinit":     self.platinit.main_menu,
                     "synccore":     self.synccore.main_menu,
-                    "loadgen":    self.loadgen.main_menu,
+                    "loadgen":      self.loadgen.main_menu,
                     "dataex":       self.dataex.main_menu,
-                    "exporchestra":    self.exporchestra.main_menu,
+                    "monhub":       self.monhub.main_menu,
+                    "exporchestra": self.exporchestra.main_menu,
                     "refresh_view": self.vt.refresh_view,
                     "exit":         self.exit
                 }
@@ -165,9 +170,8 @@ class TuiApp:
         """
         Performs cleanup operations before exiting the TUI application.
 
-        This method stops active processes such as data extraction and traffic generation,
-        and displays exit messages to the user. Some cleanup steps are commented out
-        and may be enabled as needed.
+        This method stops active processes such as data extraction, traffic generation,
+        and telemetry services, and displays exit messages to the user.
         """
 
         # Inform the user that cleanup is starting
@@ -176,13 +180,15 @@ class TuiApp:
         # Stop data extraction process
         self.dataex.stop_extraction()
 
+        # Stop telemetry / monitoring infrastructure if running
+        # self.monhub.stop_infrastructure()
+
         # Optional cleanup steps (currently disabled)
         # self.synccore.stop_ptp()
         # self.platinit.stop_namespaces()
 
         # Stop traffic generator server
-        #self.loadgen.stop_trex_server()
+        # self.loadgen.stop_trex_server()
 
         # Display exit message
         self.vt.console_message("exit", "Bye!", indent=0)
-
