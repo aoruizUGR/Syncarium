@@ -1,0 +1,145 @@
+name: syncarium-monitoring
+
+services:
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: syncarium-mqtt
+    hostname: syncarium-mqtt
+
+    restart: unless-stopped
+
+    ports:
+      - "${MQTT_PORT}:1883"
+
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt-data:/mosquitto/data
+      - mqtt-logs:/mosquitto/log
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mosquitto_pub",
+          "-h",
+          "127.0.0.1",
+          "-p",
+          "1883",
+          "-i",
+          "syncarium-healthcheck",
+          "-t",
+          "syncarium/health",
+          "-m",
+          "healthy"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - syncarium-monitoring
+
+
+  influxdb:
+    image: influxdb:2.8.0
+    container_name: syncarium-influxdb
+    hostname: syncarium-influxdb
+
+    restart: unless-stopped
+
+    ports:
+      - "${INFLUXDB_PORT}:8086"
+
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET}
+      DOCKER_INFLUXDB_INIT_RETENTION: ${INFLUXDB_RETENTION}
+
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "--silent",
+          "http://localhost:8086/health"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - syncarium-monitoring
+
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: syncarium-grafana
+    hostname: syncarium-grafana
+
+    restart: unless-stopped
+
+    ports:
+      - "${GRAFANA_PORT}:3000"
+
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - syncarium-monitoring
+
+
+networks:
+  syncarium-monitoring:
+    name: syncarium-monitoring
+    driver: bridge
+
+
+volumes:
+
+  mqtt-data:
+    name: syncarium-mqtt-data
+
+  mqtt-logs:
+    name: syncarium-mqtt-logs
+
+  influxdb-data:
+    name: syncarium-influxdb-data
+
+  influxdb-config:
+    name: syncarium-influxdb-config
+
+  grafana-data:
+    name: syncarium-grafana-data

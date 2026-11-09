@@ -1,0 +1,13 @@
+ptp_clients:
+  TimeStick:
+    config: TimeStick.conf
+    namespace: TimeStick_ns
+    interface: PTP_TimeStick
+  Intel710:
+    config: Intel710.conf
+    namespace: Intel710_ns
+    interface: PTP_Intel710_0
+  Intel810:
+    config: Intel810.conf
+    namespace: Intel810_ns
+    interface: PTP_Intel810_0

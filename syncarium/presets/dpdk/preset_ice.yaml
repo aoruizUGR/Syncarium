@@ -1,0 +1,7 @@
+dpdk_driver:    ice                     # DPDK Driver for TRex
+n_ports:        4
+
+pci_bus_port0: "0000:16:00.0"           # PCI Bus Addres for Port 0
+pci_bus_port1: "0000:16:00.1"           # PCI Bus Addres for Port 1
+pci_bus_port2: "0000:16:00.2"           # PCI Bus Addres for Port 2
+pci_bus_port3: "0000:16:00.3"           # PCI Bus Addres for Port 3

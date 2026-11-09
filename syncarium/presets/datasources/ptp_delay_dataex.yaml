@@ -1,0 +1,5 @@
+dataex_datasources:
+  Intel810_PTP_Client_Log:
+    data_class: FileLogDataSource
+    pattern: "(?P<msg_type>up|down)\\s+local\\s(?P<ts_local>\\d+)\\s+remote\\s(?P<ts_remote>\\d+)"
+    filepath: ptp-Intel810_client.log
