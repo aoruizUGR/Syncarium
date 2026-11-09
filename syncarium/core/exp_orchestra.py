@@ -30,8 +30,8 @@ from collections import deque
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
 import syncarium.utils as utils
-import syncarium.options.global_vars as global_vars
-from syncarium.core import SyncCore, LoadGen, DataEx
+import path_config as global_vars
+from syncarium.core import LocalManager, LoadGen, DataEx
 
 # ─────────────────────────────────────────────────────────────
 # 🏭 ExpOrchestra Class
@@ -44,7 +44,7 @@ class ExpOrchestra:
 # ─────────────────────────────────────────────────────────────────────────────
     def __init__(
         self,
-        synccore: SyncCore,
+        LocalManager: LocalManager,
         loadgen: LoadGen,
         dataex: DataEx,
         vt: utils.ViewTools,
@@ -58,7 +58,7 @@ class ExpOrchestra:
         and timing metadata for managing experiment lifecycle.
 
         ### Args:
-        - **synccore** (`SyncCore`): Instance responsible for managing PTP synchronization.
+        - **LocalManager** (`LocalManager`): Instance responsible for managing PTP synchronization.
         - **loadgen** (`LoadGen`): Instance responsible for traffic generation.
         - **dataex** (`DataEx`): Instance responsible for extracting experiment data.
         - **vt** (`utils.ViewTools`): Utility tools for rendering views in the console.
@@ -67,7 +67,7 @@ class ExpOrchestra:
         # Store tool instances
         self.vt: utils.ViewTools = vt
         self.telegram_bot: utils.TelegramBot = telegram_bot
-        self.synccore: SyncCore = synccore
+        self.LocalManager: LocalManager = LocalManager
         self.loadgen: LoadGen = loadgen
         self.dataex: DataEx = dataex
 
@@ -328,9 +328,9 @@ class ExpOrchestra:
     def launch_an_experiment(self, quiet: bool = False) -> None:
 
         # If PTP enabled, kill actual clients and load new PTP clients
-        if self.current_experiment.synccore_start != -1:
-            self.synccore.stop_ptp(preconfirmation=True, quiet=True)
-            self.synccore.load_clients(file_cfg=self.current_experiment.fn_absolute_path, logger=self.logger, extra_indent=1, quiet=True)
+        if self.current_experiment.LocalManager_start != -1:
+            self.LocalManager.stop_ptp(preconfirmation=True, quiet=True)
+            self.LocalManager.load_clients(file_cfg=self.current_experiment.fn_absolute_path, logger=self.logger, extra_indent=1, quiet=True)
 
         # Load datasources
         self.dataex.load_datasources(file_cfg=self.current_experiment.fn_absolute_path, quiet = True)
@@ -339,8 +339,8 @@ class ExpOrchestra:
         if not quiet: 
             self.vt.console_message("info", f"Experiment Name: {self.current_experiment.fn}", logger=self.logger)
             self.vt.console_message("info", f"dataex Datasources: {self.current_experiment.dataex_datasources} | Starting at: {str(datetime.timedelta(seconds=self.current_experiment.dataex_start))}", logger=self.logger)
-            if self.current_experiment.synccore_start != -1:
-                self.vt.console_message("info", f"PTP Clients: {self.current_experiment.synccore_clients} | Starting at: {str(datetime.timedelta(seconds=self.current_experiment.synccore_start))}", logger=self.logger)
+            if self.current_experiment.LocalManager_start != -1:
+                self.vt.console_message("info", f"PTP Clients: {self.current_experiment.LocalManager_clients} | Starting at: {str(datetime.timedelta(seconds=self.current_experiment.LocalManager_start))}", logger=self.logger)
             if self.current_experiment.stl_start != -1:
                 self.vt.console_message("info", f"STL Program: {self.current_experiment.stl_fn} | Starting at: {str(datetime.timedelta(seconds=self.current_experiment.stl_start))}", logger=self.logger)
             self.vt.console_message("info", f"Total duration: {int(self.current_experiment.duration / 60)} min | Data duration: {int(self.current_experiment.dataex_duration / 60)} min", logger=self.logger)
@@ -372,15 +372,15 @@ class ExpOrchestra:
         ]
 
         # Include PTP task if configured
-        if self.current_experiment.synccore_start != -1:
+        if self.current_experiment.LocalManager_start != -1:
             tasks.append((
-                self.current_experiment.synccore_start,
-                lambda: self.synccore.start_ptp(
+                self.current_experiment.LocalManager_start,
+                lambda: self.LocalManager.start_ptp(
                     logger          = self.logger,
                     extra_indent    = 1,
                     stop            = False
                 ),
-                "SyncCore"
+                "LocalManager"
             ))
 
         # Include STL task if configured
@@ -440,8 +440,8 @@ class ExpOrchestra:
             self.vt.console_message("info", "Waiting 10 seconds for finish.", logger=self.logger)
             self.current_experiment.state = "Finished"
             # Stop PTP if configured to do so
-            if self.current_experiment.synccore_stop_at_end is True:
-                self.synccore.stop_ptp(preconfirmation=True,logger=self.logger)
+            if self.current_experiment.LocalManager_stop_at_end is True:
+                self.LocalManager.stop_ptp(preconfirmation=True,logger=self.logger)
             # Notify Telegram
             self.telegram_bot.send_message(message=f"✅ Finished Experiment {self.current_experiment.fn} with ID {self.current_experiment.hash_id}")
 
@@ -478,9 +478,9 @@ class ExpOrchestra:
         self.stop_event.set()
 
         # Attempt to stop PTP component if it was configured
-        if self.current_experiment.synccore_start != -1:
+        if self.current_experiment.LocalManager_start != -1:
             try:
-                self.synccore.stop_ptp(preconfirmation=True, logger=self.logger, extra_indent=1)
+                self.LocalManager.stop_ptp(preconfirmation=True, logger=self.logger, extra_indent=1)
             except Exception as e:
                 errors.append(f"PTP: {e}")
 

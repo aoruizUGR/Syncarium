@@ -29,7 +29,7 @@ from typing import Any, Callable, Dict, Optional
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
 import syncarium.utils as utils
-import syncarium.options.global_vars as global_vars
+import path_config.global_vars as global_vars
 
 
 # ─────────────────────────────────────────────────────────────

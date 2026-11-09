@@ -22,7 +22,7 @@ import requests
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-import syncarium.options.telegram_vars as telegram_vars
+import path_config.telegram_vars as telegram_vars
 
 
 # ─────────────────────────────────────────────────────────────

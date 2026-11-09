@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any
 
 import syncarium.utils as utils
-import syncarium.options.global_vars as global_vars
+import path_config.global_vars as global_vars
 
 class LoadGen:
     """

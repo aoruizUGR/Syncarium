@@ -30,7 +30,7 @@ from rich.prompt import Confirm
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
 import syncarium.utils as utils
-import syncarium.options.global_vars as global_vars
+import path_config.global_vars as global_vars
 
 # ─────────────────────────────────────────────────────────────
 #  🚦 LoadGen Class

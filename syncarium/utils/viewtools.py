@@ -44,7 +44,7 @@ from InquirerPy import inquirer, get_style
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-import syncarium.options.global_vars as global_vars
+import path_config.global_vars as global_vars
 
 # ─────────────────────────────────────────────────────────────
 # 🖥️ View Tools Class

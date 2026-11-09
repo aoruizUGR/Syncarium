@@ -13,7 +13,7 @@ import streamlit as st
 from pathlib import Path
 from typing import Dict, Any, Optional
 import yaml
-import syncarium.options.global_vars as global_vars
+import path_config.global_vars as global_vars
 
 def render_load_gen(objs: Dict[str, Any]) -> None:
     """

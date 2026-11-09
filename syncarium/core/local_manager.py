@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-sync_core.py
+local_manager.py
 
 **Project**: Syncarium Platform
-**Description**: Core logic for managing PTP (Precision Time Protocol) clients, 
-                 process lifecycle, and network namespace verification.
+**Description**: Unified manager for platform initialization (namespaces) and 
+                 PTP synchronization logic.
 **Author**: PhD Student Alberto Ortega Ruiz, University of Granada
 **License**: GPLv3
 """
@@ -18,32 +18,139 @@ import psutil
 from pathlib import Path
 from datetime import datetime
 from threading import Lock
-from typing import Optional, Dict, Any, List
+from typing import Optional, List, Dict, Any
 
-import syncarium.options.global_vars as global_vars
+import path_config.global_vars as global_vars
 
-class SyncCore:
+class LocalManager:
     """
-    Manages the synchronization logic, including loading PTP clients from 
-    configurations, starting/stopping PTP processes in namespaces, 
-    and performing connectivity checks.
+    Unified manager for platform initialization, network namespace management,
+    and PTP client lifecycle control.
     """
 
     def __init__(self) -> None:
         """
-        Initializes the SyncCore instance with paths and thread-safe locks.
+        Initializes the LocalManager with directories and thread-safe locks.
         """
+        self.config_dir: Path = global_vars.NAMESPACES_DIR
+        self.scripts_dir: Path = global_vars.SCRIPTS_DIR
+        self.linuxptp_dir: Path = global_vars.LINUXPTP_DIR
         self.ptp_profile_dir: Path = global_vars.PTP_PROFILE_DIR
         self.log_dir: Path = global_vars.LOG_DIR
 
         self.print_lock: Lock = Lock()
-
         self.loaded_clients: Dict[str, Dict[str, str]] = {}
 
-    def load_clients(
-        self,
-        file_cfg: Optional[str] = None
-    ) -> bool:
+    # --- Platform Initialization Methods (formerly PlatInit) ---
+
+    def load_namespaces(self, file_cfg: Optional[str] = None) -> tuple[bool, Optional[str]]:
+        """
+        Validates if a configuration file contains the required namespace definitions.
+
+        Args:
+            file_cfg (Optional[str]): Path to the YAML configuration file.
+
+        Returns:
+            tuple[bool, Optional[str]]: (True, None) if successful, (False, error_msg) otherwise.
+        """
+        if not file_cfg:
+            return False, "Configuration file path is missing."
+
+        filepath_cfg: Path = Path(file_cfg)
+        if not filepath_cfg.is_absolute():
+            filepath_cfg = self.config_dir / file_cfg
+
+        if not filepath_cfg.exists():
+            return False, f"Configuration file not found: {filepath_cfg}"
+
+        try:
+            with open(filepath_cfg, 'r') as f:
+                config: Dict = yaml.safe_load(f)
+            
+            if config is None:
+                return False, "Configuration file is empty."
+
+            if config.get("namespaces") is None:
+                return False, "Configuration file does not contain a 'namespaces' key."
+            
+            return True, None
+        except Exception as e:
+            return False, f"YAML Parsing Error: {str(e)}"
+
+    def start_namespaces(self, file_cfg: Optional[str] = None) -> tuple[bool, Optional[str]]:
+        """
+        Creates and configures network namespaces based on the provided configuration file.
+
+        Args:
+            file_cfg (Optional[str]): Path to the YAML configuration file.
+
+        Returns:
+            tuple[bool, Optional[str]]: (True, None) if successful, (False, error_msg) otherwise.
+        """
+        success, error_msg = self.load_namespaces(file_cfg)
+        if not success:
+            return False, error_msg
+        
+        filepath_cfg: Path = Path(file_cfg)
+        if not filepath_cfg.is_absolute():
+            filepath_cfg = self.config_dir / file_cfg
+
+        try:
+            with open(filepath_cfg, 'r') as f:
+                config: Dict = yaml.safe_load(f)
+        except Exception as e:
+            return False, f"Error reading file: {str(e)}"
+        
+        namespaces_cfg = config.get("namespaces", {})
+        
+        for key, cfg in namespaces_cfg.items():
+            ns = key
+            ip_mask = cfg.get("IP/mask")
+            gw = cfg.get("gateway")
+            iface = cfg.get("interface")
+
+            if not all([ns, ip_mask, iface]):
+                continue
+
+            try:
+                subprocess.run(f"ip netns add {ns}", shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(f"ip link set {iface} netns {ns}", shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(f"ip netns exec {ns} ip addr add {ip_mask} dev {iface}", shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(f"ip netns exec {ns} ip link set dev {iface} up", shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                
+                if gw:
+                    subprocess.run(f"ip netns exec {ns} ip route add default via {gw} dev {iface}", shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                
+                subprocess.run(f"ip netns exec {ns} sysctl -w net.ipv6.conf.{iface}.disable_ipv6=1", shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError as e:
+                return False, f"Error creating/configuring namespace '{ns}': {str(e)}"
+        
+        return True, None
+
+    def stop_namespaces(self) -> tuple[bool, Optional[str]]:
+        """
+        Deletes all existing network namespaces from the system.
+
+        Returns:
+            tuple[bool, Optional[str]]: (True, None) if successful, (False, error_msg) otherwise.
+        """
+        try:
+            result = subprocess.run(["ip", "netns", "list"], capture_output=True, text=True)
+            namespaces: List[str] = [
+                line.split()[0] for line in result.stdout.strip().splitlines() if line
+            ]
+
+            for ns in namespaces:
+                subprocess.run(["ip", "netns", "delete", ns], check=True)
+
+            return True, None
+
+        except subprocess.CalledProcessError as e:
+            return False, str(e)
+
+    # --- Synchronization Methods (formerly SyncCore) ---
+
+    def load_clients(self, file_cfg: Optional[str] = None) -> bool:
         """
         Loads PTP client configurations from a YAML file and validates 
         their existence in current network namespaces.
@@ -88,10 +195,7 @@ class SyncCore:
         except Exception:
             return False
         
-    def start_ptp(
-        self,
-        stop_existing: bool = True
-    ) -> List[Dict[str, Any]]:
+    def start_ptp(self, stop_existing: bool = True) -> List[Dict[str, Any]]:
         """
         Starts PTP processes for all loaded clients within their respective namespaces.
 
@@ -124,7 +228,7 @@ class SyncCore:
             with open(log_path, 'w') as f:
                 f.write(f"[{datetime.now()}] Log reset for {client_name}\n")
 
-            ptp4l_bin = "/home/aoruiz/linuxptp-3.1.1/ptp4l" 
+            ptp4l_bin = self.linuxptp_dir / "ptp4l" 
             command: list[str] = [
                 "ip", "netns", "exec", namespace,
                 ptp4l_bin, "-f", str(config_path), "-H", "-q", "-m"
@@ -175,10 +279,7 @@ class SyncCore:
         
         return launched_processes
     
-    def stop_ptp(
-        self,
-        preconfirmation: bool = False
-    ) -> bool:
+    def stop_ptp(self, preconfirmation: bool = False) -> bool:
         """
         Stops all active PTP processes and clears the log directory.
 

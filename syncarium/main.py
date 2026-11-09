@@ -11,13 +11,12 @@ main.py
 
 import streamlit as st
 from typing import Any, Dict
-from syncarium.core import PlatInit, SyncCore, LoadGen, DataEx, ExpOrchestra, MonHub
+from syncarium.core import LocalManager, LoadGen, DataEx, ExpOrchestra, MonHub
 from syncarium.utils import ViewTools, TelegramBot
 
 from syncarium.ui import (
     render_dashboard,
-    render_plat_init,
-    render_sync_core,
+    render_local_manager,
     render_load_gen,
     # render_data_ex,
     # render_mon_hub,
@@ -29,7 +28,7 @@ def initialize_session_state() -> None:
     Initializes the Streamlit session state with core application objects.
     
     Sets up shared instances for view tools, telegram bot, and core logic 
-    components (PlatInit, SyncCore, etc.) to be accessed across different views.
+    components (SyncPlatform, etc.) to be accessed across different views.
     """
     if "app_objects" not in st.session_state:
         vt = ViewTools(console=None, version="1.0.0")
@@ -39,8 +38,7 @@ def initialize_session_state() -> None:
         st.session_state.app_objects = {
             "vt": vt, 
             "tb": tb,
-            "platinit": PlatInit(),
-            "synccore": SyncCore(),
+            "local_manager": LocalManager(),
             "loadgen": LoadGen(),
             # "dataex": DataEx(),
             # "monhub": MonHub(),
@@ -68,15 +66,14 @@ def main() -> None:
     
     menu = st.sidebar.selectbox(
         "Navigation Menu",
-        ["Dashboard", "⚙️ PlatInit", "⏱️ SyncCore", "🚦 LoadGen", 
+        ["Dashboard", "🌐 Local Manager", "🚦 LoadGen", 
          "📈 DataEx", "📊 MonHub", "🧪 ExpOrchestra"]
     )
 
     # Mapping menu titles to their respective UI functions
     views = {
         "Dashboard": render_dashboard,
-        "⚙️ PlatInit": render_plat_init,
-        "⏱️ SyncCore": render_sync_core,
+        "🌐 Local Manager": render_local_manager,
         "🚦 LoadGen": render_load_gen,
         # "📈 DataEx": render_data_ex,
         # "📊 MonHub": render_mon_hub,

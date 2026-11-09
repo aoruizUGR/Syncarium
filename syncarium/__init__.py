@@ -1,2 +1,2 @@
-from .syncarium.core import PlatInit, SyncCore, LoadGen, DataEx, Experiment
-from .syncarium.utils import ViewTools, TelegramBot
+from .core import LocalManager, LoadGen, DataEx, Experiment
+from .utils import ViewTools, TelegramBot

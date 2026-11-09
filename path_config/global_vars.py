@@ -15,9 +15,9 @@ from pathlib import Path
 # MAIN DIRS VARS
 # ─────────────────────────────────────────────────────────────
 
-ROOT_DIR: Path = Path(__file__).resolve().parent.parent.parent
+ROOT_DIR: Path = Path(__file__).resolve().parent.parent
 
-SYNCARIUM_DIR: Path = Path(__file__).resolve().parent.parent
+SYNCARIUM_DIR: Path = ROOT_DIR / "syncarium"
 
 CONFIG_DIR: Path = SYNCARIUM_DIR / "presets"
 
@@ -25,10 +25,7 @@ UTILS_DIR: Path = SYNCARIUM_DIR / "utils"
 
 SCRIPTS_DIR: Path = SYNCARIUM_DIR / "scripts"
 
-# OUTPUT_DIR: Path = ROOT_DIR / "output"
-OUTPUT_DIR: Path = ROOT_DIR.parent / "output"
-
-SUBMODULES_DIR: Path = ROOT_DIR / "submodules"
+OUTPUT_DIR: Path = ROOT_DIR / "output"
 
 LOG_DIR: Path = ROOT_DIR / "logs"
 
@@ -38,6 +35,42 @@ LOG_DIR: Path = ROOT_DIR / "logs"
 # ─────────────────────────────────────────────────────────────
 
 NAMESPACES_DIR: Path = CONFIG_DIR / "namespaces"
+
+# ─────────────────────────────────────────────────────────────
+# SYNCCORE VARS
+# ─────────────────────────────────────────────────────────────
+
+LINUXPTP_DIR: Path = ROOT_DIR.parent / "linuxptp_versions" / "linuxptp-3.1.1" #  <-------- Config LinuxPTP personal path
+
+PTP_PROFILE_DIR: Path = CONFIG_DIR / "ptp"
+
+NTP_PROFILE_DIR: Path = CONFIG_DIR / "ntp"
+
+ANSIBLE_API_PATH: Path = Path("")
+
+# ─────────────────────────────────────────────────────────────
+# LOADGEN VARS
+# ─────────────────────────────────────────────────────────────
+
+DPDK_PROFILE_DIR: Path = CONFIG_DIR / "dpdk"
+
+TGEN_DIR: Path = Path("")
+
+LOAD_DIR: Path = CONFIG_DIR / "load"
+
+
+# ─────────────────────────────────────────────────────────────
+# DATAEX VARS
+# ─────────────────────────────────────────────────────────────
+
+DATASOURCES_DIR: Path = CONFIG_DIR / "datasources"
+
+
+# ─────────────────────────────────────────────────────────────
+# EXPORCHESTRA VARS
+# ─────────────────────────────────────────────────────────────
+
+EXPERIMENTS_DIR: Path = CONFIG_DIR / "experiments"
 
 # ─────────────────────────────────────────────────────────────
 # MONHUB VARS
@@ -98,38 +131,3 @@ GRAFANA_URL: str = f"http://{GRAFANA_HOST}:{GRAFANA_PORT}"
 GRAFANA_ADMIN_USER: str = "admin"
 
 GRAFANA_ADMIN_PASSWORD: str = "syncarium"
-
-
-# ─────────────────────────────────────────────────────────────
-# SYNCCORE VARS
-# ─────────────────────────────────────────────────────────────
-
-PTP_PROFILE_DIR: Path = CONFIG_DIR / "ptp"
-
-NTP_PROFILE_DIR: Path = CONFIG_DIR / "ntp"
-
-ANSIBLE_API_PATH: Path = SUBMODULES_DIR / "Ansible" / "lib"
-
-# ─────────────────────────────────────────────────────────────
-# LOADGEN VARS
-# ─────────────────────────────────────────────────────────────
-
-DPDK_PROFILE_DIR: Path = CONFIG_DIR / "dpdk"
-
-TGEN_DIR: Path = SUBMODULES_DIR / "traffic_generators"
-
-LOAD_DIR: Path = CONFIG_DIR / "load"
-
-
-# ─────────────────────────────────────────────────────────────
-# DATAEX VARS
-# ─────────────────────────────────────────────────────────────
-
-DATASOURCES_DIR: Path = CONFIG_DIR / "datasources"
-
-
-# ─────────────────────────────────────────────────────────────
-# EXPORCHESTRA VARS
-# ─────────────────────────────────────────────────────────────
-
-EXPERIMENTS_DIR: Path = CONFIG_DIR / "experiments"
