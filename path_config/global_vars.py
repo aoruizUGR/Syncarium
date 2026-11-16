@@ -11,15 +11,12 @@ global_vars.py
 
 from pathlib import Path
 
-# ─────────────────────────────────────────────────────────────
-# MAIN DIRS VARS
-# ─────────────────────────────────────────────────────────────
 
 ROOT_DIR: Path = Path(__file__).resolve().parent.parent
 
 SYNCARIUM_DIR: Path = ROOT_DIR / "syncarium"
 
-CONFIG_DIR: Path = SYNCARIUM_DIR / "presets"
+PRESET_DIR: Path = SYNCARIUM_DIR / "presets"
 
 UTILS_DIR: Path = SYNCARIUM_DIR / "utils"
 
@@ -29,55 +26,38 @@ OUTPUT_DIR: Path = ROOT_DIR / "output"
 
 LOG_DIR: Path = ROOT_DIR / "logs"
 
-
-# ─────────────────────────────────────────────────────────────
-# PLATINIT VARS
-# ─────────────────────────────────────────────────────────────
-
-NAMESPACES_DIR: Path = CONFIG_DIR / "namespaces"
-
-# ─────────────────────────────────────────────────────────────
-# SYNCCORE VARS
-# ─────────────────────────────────────────────────────────────
-
 LINUXPTP_DIR: Path = ROOT_DIR.parent / "linuxptp_versions" / "linuxptp-3.1.1" #  <-------- Config LinuxPTP personal path
 
-PTP_PROFILE_DIR: Path = CONFIG_DIR / "ptp"
+TGEN_DIR: Path = ROOT_DIR.parent / "traffic_generators"
 
-NTP_PROFILE_DIR: Path = CONFIG_DIR / "ntp"
+DPDK_PROFILE_DIR: Path = PRESET_DIR / "dpdk"
 
-ANSIBLE_API_PATH: Path = Path("")
+NAMESPACES_PROFILE_DIR: Path = PRESET_DIR / "namespaces"
 
-# ─────────────────────────────────────────────────────────────
-# LOADGEN VARS
-# ─────────────────────────────────────────────────────────────
+PTP_PROFILE_DIR: Path = PRESET_DIR / "ptp"
 
-DPDK_PROFILE_DIR: Path = CONFIG_DIR / "dpdk"
-
-TGEN_DIR: Path = Path("")
-
-LOAD_DIR: Path = CONFIG_DIR / "load"
+LOAD_PROFILE_DIR: Path = PRESET_DIR / "load"
 
 
 # ─────────────────────────────────────────────────────────────
 # DATAEX VARS
 # ─────────────────────────────────────────────────────────────
 
-DATASOURCES_DIR: Path = CONFIG_DIR / "datasources"
+DATASOURCES_DIR: Path = PRESET_DIR / "datasources"
 
 
 # ─────────────────────────────────────────────────────────────
 # EXPORCHESTRA VARS
 # ─────────────────────────────────────────────────────────────
 
-EXPERIMENTS_DIR: Path = CONFIG_DIR / "experiments"
+EXPERIMENTS_DIR: Path = PRESET_DIR / "experiments"
 
 # ─────────────────────────────────────────────────────────────
 # MONHUB VARS
 # ─────────────────────────────────────────────────────────────
 
 # Monitoring configuration directory
-MONITORING_DIR: Path = CONFIG_DIR / "monitoring"
+MONITORING_DIR: Path = PRESET_DIR / "monitoring"
 
 # Docker Compose deployment file
 DOCKER_COMPOSE_FILE: Path = MONITORING_DIR / "docker-compose.yaml"

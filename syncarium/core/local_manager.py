@@ -32,7 +32,7 @@ class LocalManager:
         """
         Initializes the LocalManager with directories and thread-safe locks.
         """
-        self.config_dir: Path = global_vars.NAMESPACES_DIR
+        self.config_dir: Path = global_vars.NAMESPACES_PROFILE_DIR
         self.scripts_dir: Path = global_vars.SCRIPTS_DIR
         self.linuxptp_dir: Path = global_vars.LINUXPTP_DIR
         self.ptp_profile_dir: Path = global_vars.PTP_PROFILE_DIR

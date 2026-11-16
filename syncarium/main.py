@@ -11,13 +11,12 @@ main.py
 
 import streamlit as st
 from typing import Any, Dict
-from syncarium.core import LocalManager, LoadGen, DataEx, ExpOrchestra, MonHub
-from syncarium.utils import ViewTools, TelegramBot
+from syncarium.core import LocalManager, TrafficGenerator #, DataEx, ExpOrchestra, MonHub
 
 from syncarium.ui import (
     render_dashboard,
     render_local_manager,
-    render_load_gen,
+    render_traffic_generator,
     # render_data_ex,
     # render_mon_hub,
     # render_exp_orchestra
@@ -31,15 +30,11 @@ def initialize_session_state() -> None:
     components (SyncPlatform, etc.) to be accessed across different views.
     """
     if "app_objects" not in st.session_state:
-        vt = ViewTools(console=None, version="1.0.0")
-        tb = TelegramBot()
         
         # Initialize pure logic objects
         st.session_state.app_objects = {
-            "vt": vt, 
-            "tb": tb,
             "local_manager": LocalManager(),
-            "loadgen": LoadGen(),
+            "traffic_generator": TrafficGenerator(),
             # "dataex": DataEx(),
             # "monhub": MonHub(),
             # "exporchestra": ExpOrchestra(
@@ -66,7 +61,7 @@ def main() -> None:
     
     menu = st.sidebar.selectbox(
         "Navigation Menu",
-        ["Dashboard", "🌐 Local Manager", "🚦 LoadGen", 
+        ["Dashboard", "🌐 Local Manager", "🚦 Traffic Generator", 
          "📈 DataEx", "📊 MonHub", "🧪 ExpOrchestra"]
     )
 
@@ -74,7 +69,7 @@ def main() -> None:
     views = {
         "Dashboard": render_dashboard,
         "🌐 Local Manager": render_local_manager,
-        "🚦 LoadGen": render_load_gen,
+        "🚦 Traffic Generator": render_traffic_generator,
         # "📈 DataEx": render_data_ex,
         # "📊 MonHub": render_mon_hub,
         # "🧪 ExpOrchestra": render_exp_orchestra
