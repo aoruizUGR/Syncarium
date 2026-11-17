@@ -29,7 +29,7 @@ from typing import Any, Callable, Dict, Optional
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
 import syncarium.utils as utils
-import path_config.global_vars as global_vars
+import path_config.global_paths as global_paths
 
 
 # ─────────────────────────────────────────────────────────────
@@ -97,38 +97,38 @@ class MonHub:
         self.vt: utils.ViewTools = vt
 
         # Docker Compose deployment file
-        self.compose_file: Path = global_vars.DOCKER_COMPOSE_FILE
+        self.compose_file: Path = global_paths.DOCKER_COMPOSE_FILE
 
         # MQTT service configuration used by the internal injector
-        self.mqtt_host: str = global_vars.MQTT_HOST
-        self.mqtt_port: int = global_vars.MQTT_PORT
-        self.mqtt_topic: str = global_vars.MQTT_TOPIC
-        self.mqtt_client_id: str = global_vars.MQTT_CLIENT_ID
+        self.mqtt_host: str = global_paths.MQTT_HOST
+        self.mqtt_port: int = global_paths.MQTT_PORT
+        self.mqtt_topic: str = global_paths.MQTT_TOPIC
+        self.mqtt_client_id: str = global_paths.MQTT_CLIENT_ID
 
         # InfluxDB service configuration used by the internal injector
-        self.influxdb_url: str = global_vars.INFLUXDB_URL
-        self.influxdb_token: str = global_vars.INFLUXDB_TOKEN
-        self.influxdb_org: str = global_vars.INFLUXDB_ORG
-        self.influxdb_bucket: str = global_vars.INFLUXDB_BUCKET
+        self.influxdb_url: str = global_paths.INFLUXDB_URL
+        self.influxdb_token: str = global_paths.INFLUXDB_TOKEN
+        self.influxdb_org: str = global_paths.INFLUXDB_ORG
+        self.influxdb_bucket: str = global_paths.INFLUXDB_BUCKET
 
         # Grafana service endpoint
-        self.grafana_url: str = global_vars.GRAFANA_URL
+        self.grafana_url: str = global_paths.GRAFANA_URL
 
         # Environment variables passed to Docker Compose
         self.compose_environment: Dict[str, str] = os.environ.copy()
 
         self.compose_environment.update({
-            "MQTT_PORT": str(global_vars.MQTT_PORT),
-            "INFLUXDB_PORT": str(global_vars.INFLUXDB_PORT),
-            "INFLUXDB_USERNAME": global_vars.INFLUXDB_USERNAME,
-            "INFLUXDB_PASSWORD": global_vars.INFLUXDB_PASSWORD,
-            "INFLUXDB_TOKEN": global_vars.INFLUXDB_TOKEN,
-            "INFLUXDB_ORG": global_vars.INFLUXDB_ORG,
-            "INFLUXDB_BUCKET": global_vars.INFLUXDB_BUCKET,
-            "INFLUXDB_RETENTION": str(global_vars.INFLUXDB_RETENTION),
-            "GRAFANA_PORT": str(global_vars.GRAFANA_PORT),
-            "GRAFANA_ADMIN_USER": global_vars.GRAFANA_ADMIN_USER,
-            "GRAFANA_ADMIN_PASSWORD": global_vars.GRAFANA_ADMIN_PASSWORD,
+            "MQTT_PORT": str(global_paths.MQTT_PORT),
+            "INFLUXDB_PORT": str(global_paths.INFLUXDB_PORT),
+            "INFLUXDB_USERNAME": global_paths.INFLUXDB_USERNAME,
+            "INFLUXDB_PASSWORD": global_paths.INFLUXDB_PASSWORD,
+            "INFLUXDB_TOKEN": global_paths.INFLUXDB_TOKEN,
+            "INFLUXDB_ORG": global_paths.INFLUXDB_ORG,
+            "INFLUXDB_BUCKET": global_paths.INFLUXDB_BUCKET,
+            "INFLUXDB_RETENTION": str(global_paths.INFLUXDB_RETENTION),
+            "GRAFANA_PORT": str(global_paths.GRAFANA_PORT),
+            "GRAFANA_ADMIN_USER": global_paths.GRAFANA_ADMIN_USER,
+            "GRAFANA_ADMIN_PASSWORD": global_paths.GRAFANA_ADMIN_PASSWORD,
         })
 
         # Runtime telemetry client information

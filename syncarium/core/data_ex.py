@@ -33,7 +33,7 @@ from rich.prompt import Prompt, IntPrompt, Confirm
 # Local Application Imports
 import syncarium.utils as utils
 import syncarium.core.dsources as dsources
-import path_config.global_vars as global_vars
+import path_config.global_paths as global_paths
 
 
 # ─────────────────────────────────────────────────────────────
@@ -68,8 +68,8 @@ class DataEx:
         self.vt: utils.ViewTools = vt
 
         # Define configuration and output directories using pathlib
-        self.datasources_dir: Path = global_vars.DATASOURCES_DIR
-        self.output_dir: Path = global_vars.OUTPUT_DIR
+        self.datasources_dir: Path = global_paths.DATASOURCES_DIR
+        self.output_dir: Path = global_paths.OUTPUT_DIR
 
         # Initialize the list of loaded data sources
         self.loaded_datasources: List[dsources.DataSource] = []
@@ -254,7 +254,7 @@ class DataEx:
                 if data_class == 'FileLogDataSource':
                     if not quiet: self.vt.console_message("info", f"Loading FileLogDataSource config: {source_name}", indent=1)
 
-                    log_path = global_vars.LOG_DIR / Path(source_info["filepath"])
+                    log_path = global_paths.LOG_DIR / Path(source_info["filepath"])
                     if not log_path.is_file():
                         if not quiet: 
                             self.vt.console_message("error", f"Log file not found: {log_path}", indent=2)

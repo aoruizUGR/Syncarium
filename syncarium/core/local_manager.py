@@ -20,7 +20,7 @@ from datetime import datetime
 from threading import Lock
 from typing import Optional, List, Dict, Any
 
-import path_config.global_vars as global_vars
+import path_config.global_paths as global_paths
 
 class LocalManager:
     """
@@ -32,11 +32,11 @@ class LocalManager:
         """
         Initializes the LocalManager with directories and thread-safe locks.
         """
-        self.config_dir: Path = global_vars.NAMESPACES_PROFILE_DIR
-        self.scripts_dir: Path = global_vars.SCRIPTS_DIR
-        self.linuxptp_dir: Path = global_vars.LINUXPTP_DIR
-        self.ptp_profile_dir: Path = global_vars.PTP_PROFILE_DIR
-        self.log_dir: Path = global_vars.LOG_DIR
+        self.config_dir: Path = global_paths.NAMESPACES_PROFILE_DIR
+        self.scripts_dir: Path = global_paths.SCRIPTS_DIR
+        self.linuxptp_dir: Path = global_paths.LINUXPTP_DIR
+        self.ptp_profile_dir: Path = global_paths.PTP_PROFILE_DIR
+        self.log_dir: Path = global_paths.LOG_DIR
 
         self.print_lock: Lock = Lock()
         self.loaded_clients: Dict[str, Dict[str, str]] = {}

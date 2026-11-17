@@ -24,7 +24,7 @@ from pathlib import Path
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Local Application Imports
-import path_config.global_vars as global_vars
+import path_config.global_paths as global_paths
 
 # ─────────────────────────────────────────────────────────────
 # 🧪 Experiment Class
@@ -54,7 +54,7 @@ class Experiment:
             self.synccore_clients = list(data.get("synccore_clients", {}).keys())
 
             # Prepare output directories
-            self.exp_output_dir = global_vars.OUTPUT_DIR / Path(data.get("output_filepath"))
+            self.exp_output_dir = global_paths.OUTPUT_DIR / Path(data.get("output_filepath"))
             self.exp_output_dir.mkdir(parents=True, exist_ok=True)
 
             # Prepare output file paths

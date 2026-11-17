@@ -5,11 +5,7 @@ import yaml
 import sys
 from pathlib import Path
 from typing import Optional, Dict, List, Any
-import path_config.global_vars as global_vars
-
-# Note: The actual paths are managed within the TrafficGenerator class
-# and injected into the environment during runtime.
-
+import path_config.global_paths as global_paths
 
 class TrafficGenerator:
     """
@@ -19,17 +15,17 @@ class TrafficGenerator:
 
     def __init__(self) -> None:
         # Define paths for configuration and scripts
-        self.load_dir: Path = global_vars.LOAD_PROFILE_DIR
-        self.utils_dir: Path = global_vars.UTILS_DIR
-        self.dpdk_profile_dir: Path = global_vars.DPDK_PROFILE_DIR
-        self.scripts_dir: Path = global_vars.SCRIPTS_DIR
+        self.load_dir: Path = global_paths.LOAD_PROFILE_DIR
+        self.utils_dir: Path = global_paths.UTILS_DIR
+        self.dpdk_profile_dir: Path = global_paths.DPDK_PROFILE_DIR
+        self.scripts_dir: Path = global_paths.SCRIPTS_DIR
 
         # Traffic generator metadata
-        self.loadgen_name: Optional[str] = None
-        self.loadgen_ver: Optional[str] = None
-        self.loadgen_dir: Optional[Path] = None
-        self.loadgen_server_dir: Optional[Path] = None
-        self.loadgen_client_dir: Optional[Path] = None
+        self.traffic_gen_name: Optional[str] = None
+        self.traffic_gen_ver: Optional[str] = None
+        self.traffic_gen_dir: Optional[Path] = None
+        self.traffic_gen_server_dir: Optional[Path] = None
+        self.traffic_gen_client_dir: Optional[Path] = None
 
         # STL script execution details
         self.stl_filename: Optional[str] = None
@@ -40,34 +36,37 @@ class TrafficGenerator:
         self.stl_state: Optional[str] = None
         self.stl_env: Optional[Dict] = None
 
+        # TRex server details
+        self.trex_pid: Optional[int] = None
+
         # TRex TUI details removed
 
-    def select_load_gen(self, selected_name: str) -> bool:
+    def select_traffic_gen(self, selected_name: str) -> bool:
         """Sets up the environment for a selected generator by name."""
         import streamlit as st
-        self.loadgen_dir = global_vars.TGEN_DIR
+        self.traffic_gen_dir = global_paths.TGEN_DIR
         
-        if not self.loadgen_dir.exists():
+        if not self.traffic_gen_dir.exists():
             return False
         
         # Update internal paths based on selection
-        self.loadgen_name = selected_name
-        self.loadgen_server_dir = self.loadgen_dir / self.loadgen_name / "server"
-        self.loadgen_client_dir = self.loadgen_dir / self.loadgen_name / "client"
+        self.traffic_gen_name = selected_name
+        self.traffic_gen_server_dir = self.traffic_gen_dir / self.traffic_gen_name / "server"
+        self.traffic_gen_client_dir = self.traffic_gen_dir / self.traffic_gen_name / "client"
         
         # Build PYTHONPATH for STL client scripts using the updated server directory
         self.stl_env = os.environ.copy()
-        trex_interactive = self.loadgen_server_dir / "automation/trex_control_plane/interactive"
-        trex_external_libs = self.loadgen_server_dir / "external_libs/scapy-2.4.3"
+        trex_interactive = self.traffic_gen_server_dir / "automation/trex_control_plane/interactive"
+        trex_external_libs = self.traffic_gen_server_dir / "external_libs/scapy-2.4.3"
 
         for p in [str(trex_interactive), str(trex_external_libs)]:
             if p not in sys.path:
                 sys.path.insert(0, p)
 
-        version = self.loadgen_name.split("_v")[-1]
-        if self.loadgen_ver != version:
+        version = self.traffic_gen_name.split("_v")[-1]
+        if self.traffic_gen_ver != version:
             self.stop_trex_server()
-            self.loadgen_ver = version
+            self.traffic_gen_ver = version
         
         # Persist the selection in session state
         st.session_state["selected_generator"] = selected_name
@@ -135,27 +134,32 @@ class TrafficGenerator:
             self.stop_trex_server()
         
         if file_cfg is None:
-            files = [f.name for f in self.loadgen_server_dir.iterdir() if f.name.startswith("trex_") and f.suffix == ".yaml"]
+            files = [f.name for f in self.traffic_gen_server_dir.iterdir() if f.name.startswith("trex_") and f.suffix == ".yaml"]
             if not files: return False
-            filepath_cfg = self.loadgen_server_dir / files[0]
+            filepath_cfg = self.traffic_gen_server_dir / files[0]
         else:
-            filepath_cfg = self.loadgen_server_dir / file_cfg
+            filepath_cfg = self.traffic_gen_server_dir / file_cfg
         
         script_path = self.scripts_dir / "config_hugepages.sh"
         subprocess.run(["sudo", "chmod", "a+x", str(script_path)], check=True)
         subprocess.run(["sudo", str(script_path)], check=True)
         
-        command = [str(self.loadgen_server_dir / "t-rex-64"), "-i", "--software", "--no-scapy-server", "--cfg", str(filepath_cfg.resolve())]
+        command = [str(self.traffic_gen_server_dir / "t-rex-64"), "-i", "--software", "--no-scapy-server", "--cfg", str(filepath_cfg.resolve())]
         
         # Start TRex server
-        subprocess.Popen(
-            ["sudo"] + command,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL,
-            cwd=self.loadgen_server_dir,
-            preexec_fn=os.setpgrp
-        )
+        try:
+            process = subprocess.Popen(
+                ["sudo"] + command,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                cwd=self.traffic_gen_server_dir
+            )
+            # Store the PID for proper cleanup
+            self.trex_pid = process.pid
+        except Exception as e:
+            print(f"Error starting TRex server: {e}")
+            return False
         
         time.sleep(sleep_seconds)
         
@@ -163,6 +167,17 @@ class TrafficGenerator:
 
     def stop_trex_server(self) -> bool:
         """Stops all TRex server processes."""
+        # Try to kill using stored PID first (more reliable)
+        if self.trex_pid is not None:
+            try:
+                subprocess.run(["sudo", "kill", "-TERM", str(self.trex_pid)], check=True, capture_output=True)
+                self.trex_pid = None
+                return True
+            except subprocess.CalledProcessError:
+                # If that fails, fall back to pgrep method
+                pass
+
+        # Fallback to pgrep method
         result = subprocess.run(["pgrep", "-a", "_t-rex-64"], capture_output=True, text=True)
         lines = result.stdout.strip().splitlines()
         if not lines:
@@ -170,11 +185,41 @@ class TrafficGenerator:
         
         for line in lines:
             pid = line.split()[0]
-            subprocess.run(["sudo", "kill", "-9", pid], check=True)
+            try:
+                subprocess.run(["sudo", "kill", "-9", pid], check=True)
+            except subprocess.CalledProcessError:
+                # If we can't kill it, continue with other processes
+                pass
+        self.trex_pid = None
         return True
 
     def get_server_status(self) -> Dict[str, Any]:
         """Retrieves the current TRex server status."""
+        # First check if we have a stored PID
+        if self.trex_pid is not None:
+            try:
+                # Verify that process with stored PID is still running
+                result = subprocess.run(["ps", "-p", str(self.trex_pid), "-o", "pid,cmd"], capture_output=True, text=True)
+                if result.returncode == 0 and self.trex_pid == int(result.stdout.split()[0]):
+                    # Process is still running, get config from command line
+                    cmd = result.stdout.strip()
+                    config_path = "Unknown"
+                    if "--cfg" in cmd:
+                        try:
+                            cfg_idx = cmd.find("--cfg")
+                            config_path = cmd[cfg_idx + 5:].split()[0].strip()
+                        except IndexError:
+                            pass
+                    return {
+                        "pid": self.trex_pid,
+                        "config": config_path,
+                        "status": "Running"
+                    }
+            except (subprocess.CalledProcessError, ValueError):
+                # PID no longer valid or error in process check
+                self.trex_pid = None  # Reset stored PID
+
+        # Fallback to pgrep method if no stored PID or PID not valid
         result = subprocess.run(["pgrep", "-a", "_t-rex-64"], capture_output=True, text=True)
         lines = result.stdout.strip().splitlines()
         
@@ -201,6 +246,8 @@ class TrafficGenerator:
             except IndexError:
                 pass
         
+        # Store the PID for future reference
+        self.trex_pid = int(pid)
         return {
             "pid": pid,
             "config": config_path,
@@ -220,14 +267,6 @@ class TrafficGenerator:
                 check=True
             )
             output = result.stdout
-            
-            # The script outputs sections like:
-            # Network devices using DPDK-compatible driver
-            # ============================================
-            # 0000:16:00.0 'Ethernet Controller E810-C for SFP 1593' numa_node=0 drv=vfio-pci unused=ice,uio_pci_generic
-            
-            # We only want to capture devices that are using DPDK-compatible drivers.
-            # These are listed in the "Network devices using DPDK-compatible driver" section.
             lines = output.splitlines()
             dpdk_drivers = ["igb_uio", "vfio-pci", "uio_pci_generic"]
             
@@ -262,13 +301,13 @@ class TrafficGenerator:
     def get_trex_stats(self) -> Optional[Dict[str, Any]]:
         """
         Connects to the TRex server via STL API and retrieves port statistics.
-        Returns: Optional[Dict]: A dictionary of stats if successful, None otherwise.
+        Returns: Optional[Dict]: A dictionary of stats if successful, or a dict with error info otherwise.
         """
         from trex.stl.api import STLClient
 
         if STLClient is None:
             print("Error: STLClient is not available. Check the TRex path configuration.")
-            return None
+            return {"error": "STLClient is not available. Check the TRex path configuration."}
 
         client = STLClient()
         try:
@@ -279,13 +318,18 @@ class TrafficGenerator:
             ports = client.get_all_ports()
             #print(f"Puertos activos: {ports}")
             stats = client.get_stats(ports)
-            print(stats)
-            
-            return stats
+            port_attrs = {}
+            for port_id in ports:
+                port_attrs[port_id] = client.get_port_attr(port_id)
+            return {
+                "stats": stats,
+                "port_attrs": port_attrs
+            }
             
         except Exception as e:
-            print(f"Error comunicando con TRex: {e}")
-            return None
+            error_msg = f"Error comunicando con TRex: {e}"
+            print(error_msg)
+            return {"error": error_msg}
             
         finally:
             # Desconectar limpiamente
@@ -293,11 +337,6 @@ class TrafficGenerator:
                 client.disconnect()
             except Exception:
                 pass
-
-    def get_trex_tui_stats(self) -> str:
-        """Executes the trex-console command directly to get port statistics."""
-        # This method is deprecated as TUI management is removed.
-        return "TUI management removed."
 
     def start_stl_program(
         self,
@@ -321,16 +360,16 @@ class TrafficGenerator:
         with open(filepath_cfg, 'r') as f:
             stl = yaml.safe_load(f)
 
-        self.stl_filename = stl.get("loadgen_stl_program")
+        self.stl_filename = stl.get("traffic_gen_stl_program")
         
         if stl_duration and stl_output:
             self.stl_duration = stl_duration
-            self.stl_args = [str(self.stl_duration)] + [str(v) for v in stl.get("loadgen_stl_args", {}).values()] + [str(stl_output)]
+            self.stl_args = [str(self.stl_duration)] + [str(v) for v in stl.get("traffic_gen_stl_args", {}).values()] + [str(stl_output)]
         else:
-            self.stl_duration = stl.get("loadgen_stl_args", {}).get("duration")
-            self.stl_args = [str(v) for v in stl.get("loadgen_stl_args", {}).values()]
+            self.stl_duration = stl.get("traffic_gen_stl_args", {}).get("duration")
+            self.stl_args = [str(v) for v in stl.get("traffic_gen_stl_args", {}).values()]
 
-        stl_filepath = self.loadgen_client_dir / self.stl_filename
+        stl_filepath = self.traffic_gen_client_dir / self.stl_filename
         if not stl_filepath.exists():
             return False
 

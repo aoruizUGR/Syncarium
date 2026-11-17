@@ -39,7 +39,7 @@ def initialize_session_state() -> None:
             # "monhub": MonHub(),
             # "exporchestra": ExpOrchestra(
             #    st.session_state.app_objects["synccore"],
-            #    st.session_state.app_objects["loadgen"],
+            #    st.session_state.app_objects["traffic_gen"],
             #    st.session_state.app_objects["dataex"],
             #    vt,
             #    tb
