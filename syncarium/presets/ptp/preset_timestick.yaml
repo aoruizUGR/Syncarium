@@ -1,0 +1,5 @@
+ptp_clients:
+  TimeStick:
+    config: TimeStick.conf
+    namespace: TimeStick_ns
+    interface: PTP_TimeStick

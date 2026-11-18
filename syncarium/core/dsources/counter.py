@@ -3,50 +3,22 @@
 import multiprocessing as mp
 import signal
 import time
-from multiprocessing.synchronize import Event as _EventType
-
 import pyvisa as visa
+
+from multiprocessing.synchronize import Event as _EventType
 from pyvisa.resources import MessageBasedResource
 
 from .datasource import DataSource
 
-# ─────────────────────────────────────────────────────────────
-#  🛢️ Data Source SubSubClass
-# ─────────────────────────────────────────────────────────────
+
 class CounterDataSource(DataSource):
-    """
-    Frequency counter data source using the VISA communication standard.
 
-    ### Attributes
-    - **resource_name** (`str`): VISA resource identifier of the frequency counter.
-    """
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 🚧 Function: constructor
-# ─────────────────────────────────────────────────────────────────────────────
     def __init__(self, queue: mp.Queue, event: _EventType, resource_name: str) -> None:
-        """
-        Initializes a `CounterDataSource` with a specific VISA resource name.
-
-        ### Args
-        - **queue** (`mp.Queue`): Queue used to send metrics.
-        - **event** (`_EventType`): Event used to signal thread termination.
-        - **resource_name** (`str`): VISA resource identifier of the frequency counter.
-        """
         super().__init__(queue, event)
         self.resource_name = resource_name
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 📌 Function: run
-# ─────────────────────────────────────────────────────────────────────────────
     def run(self) -> None:
-        """
-        Continuously reads data from the frequency counter and sends metrics to the queue.
-
-        The method configures the instrument using VISA commands and reads timestamped
-        measurements until the stop event is triggered.
-        """
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
         rm = visa.ResourceManager()

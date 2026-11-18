@@ -1,0 +1,5 @@
+namespaces:
+  TimeStick_ns:
+    IP/mask:        "10.102.0.10/24"
+    gateway:        "10.102.0.1"
+    interface:      "PTP_TimeStick"

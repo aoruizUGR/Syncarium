@@ -1,0 +1,6 @@
+dataex_datasources:
+  DataSource:               # <---- Data Source name
+    data_class: DataSource  # <---- Data Source class
+    arg1:                   # <---- Argument 1
+    arg2:                   # <---- Argument 2
+    arg3:                   # <---- ...

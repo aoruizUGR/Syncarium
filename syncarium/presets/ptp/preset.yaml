@@ -1,0 +1,5 @@
+ptp_clients:
+  ptp_client_name:            # <---- PTP Client name
+    config: linuxptp.conf     # <---- LinuxPTP config filename
+    namespace: namespace_name # <---- Namespace name
+    interface: interface_name # <---- Interface Name

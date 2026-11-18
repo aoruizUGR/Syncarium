@@ -1,0 +1,4 @@
+dataex_datasources:
+  Counter:
+    data_class: CounterDataSource
+    resource_name: TCPIP0::192.168.1.100::INSTR

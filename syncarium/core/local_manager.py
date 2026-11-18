@@ -1,58 +1,28 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-local_manager.py
-
-**Project**: Syncarium Platform
-**Description**: Unified manager for platform initialization (namespaces) and 
-                 PTP synchronization logic.
-**Author**: PhD Student Alberto Ortega Ruiz, University of Granada
-**License**: GPLv3
-"""
-
 import os
 import time
 import subprocess
 import yaml
 import psutil
+
 from pathlib import Path
 from datetime import datetime
-from threading import Lock
 from typing import Optional, List, Dict, Any
 
 import path_config.global_paths as global_paths
 
+
 class LocalManager:
-    """
-    Unified manager for platform initialization, network namespace management,
-    and PTP client lifecycle control.
-    """
 
     def __init__(self) -> None:
-        """
-        Initializes the LocalManager with directories and thread-safe locks.
-        """
         self.config_dir: Path = global_paths.NAMESPACES_PROFILE_DIR
-        self.scripts_dir: Path = global_paths.SCRIPTS_DIR
         self.linuxptp_dir: Path = global_paths.LINUXPTP_DIR
-        self.ptp_profile_dir: Path = global_paths.PTP_PROFILE_DIR
+        self.ptp_clients_profile_dir: Path = global_paths.PTP_CLIENTS_PROFILE_DIR
+        self.linuxptp_profile_dir: Path = global_paths.LINUXPTP_PROFILE_DIR
         self.log_dir: Path = global_paths.LOG_DIR
 
-        self.print_lock: Lock = Lock()
         self.loaded_clients: Dict[str, Dict[str, str]] = {}
 
-    # --- Platform Initialization Methods (formerly PlatInit) ---
-
     def load_namespaces(self, file_cfg: Optional[str] = None) -> tuple[bool, Optional[str]]:
-        """
-        Validates if a configuration file contains the required namespace definitions.
-
-        Args:
-            file_cfg (Optional[str]): Path to the YAML configuration file.
-
-        Returns:
-            tuple[bool, Optional[str]]: (True, None) if successful, (False, error_msg) otherwise.
-        """
         if not file_cfg:
             return False, "Configuration file path is missing."
 
@@ -78,15 +48,6 @@ class LocalManager:
             return False, f"YAML Parsing Error: {str(e)}"
 
     def start_namespaces(self, file_cfg: Optional[str] = None) -> tuple[bool, Optional[str]]:
-        """
-        Creates and configures network namespaces based on the provided configuration file.
-
-        Args:
-            file_cfg (Optional[str]): Path to the YAML configuration file.
-
-        Returns:
-            tuple[bool, Optional[str]]: (True, None) if successful, (False, error_msg) otherwise.
-        """
         success, error_msg = self.load_namespaces(file_cfg)
         if not success:
             return False, error_msg
@@ -128,14 +89,8 @@ class LocalManager:
         return True, None
 
     def stop_namespaces(self) -> tuple[bool, Optional[str]]:
-        """
-        Deletes all existing network namespaces from the system.
-
-        Returns:
-            tuple[bool, Optional[str]]: (True, None) if successful, (False, error_msg) otherwise.
-        """
         try:
-            result = subprocess.run(["ip", "netns", "list"], capture_output=True, text=True)
+            result = subprocess.run(["ip", "netns", "list"], capture_output=True, text=True, check=True)
             namespaces: List[str] = [
                 line.split()[0] for line in result.stdout.strip().splitlines() if line
             ]
@@ -148,25 +103,15 @@ class LocalManager:
         except subprocess.CalledProcessError as e:
             return False, str(e)
 
-    # --- Synchronization Methods (formerly SyncCore) ---
-
     def load_clients(self, file_cfg: Optional[str] = None) -> bool:
-        """
-        Loads PTP client configurations from a YAML file and validates 
-        their existence in current network namespaces.
-
-        Args:
-            file_cfg (Optional[str]): Path to the YAML configuration file.
-
-        Returns:
-            bool: True if clients were successfully loaded and validated, False otherwise.
-        """
         if not file_cfg:
             return False
 
-        filepath_cfg = Path(file_cfg)
-        if not filepath_cfg.is_absolute():
-            filepath_cfg = self.ptp_profile_dir / file_cfg
+        # Corregir el path para archivos relativos
+        if not Path(file_cfg).is_absolute():
+            filepath_cfg = self.ptp_clients_profile_dir / file_cfg
+        else:
+            filepath_cfg = Path(file_cfg)
 
         if not filepath_cfg.exists():
             return False
@@ -176,68 +121,49 @@ class LocalManager:
                 yaml_data: Dict = yaml.safe_load(f)
                 self.loaded_clients = yaml_data.get("ptp_clients", {})
 
-            ns_result = subprocess.run(["ip", "netns", "list"], stdout=subprocess.PIPE, text=True)
+            ns_result = subprocess.run(["ip", "netns", "list"], stdout=subprocess.PIPE, text=True, check=True)
             existing_namespaces: set[str] = {
                 line.split()[0] for line in ns_result.stdout.strip().splitlines()
             }
 
-            to_delete = []
+            # Eliminar clientes cuyo namespace no exista
             for client_name, client_data in list(self.loaded_clients.items()):
                 ns = client_data.get("namespace")
                 if ns not in existing_namespaces:
-                    to_delete.append(client_name)
-
-            for client_name in to_delete:
-                del self.loaded_clients[client_name]
+                    del self.loaded_clients[client_name]
 
             return len(self.loaded_clients) > 0
 
-        except Exception:
+        except Exception as e:
             return False
-        
+
     def start_ptp(self, stop_existing: bool = True) -> List[Dict[str, Any]]:
-        """
-        Starts PTP processes for all loaded clients within their respective namespaces.
-
-        Args:
-            stop_existing (bool): If True, stops any running ptp4l processes before starting new ones.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing the status, PID, 
-                                   and log path for each launched client.
-        """
         if stop_existing:
-            result = subprocess.run(["pgrep", "-a", "ptp4l"], capture_output=True, text=True)
-            lines = result.stdout.strip().splitlines()
-            if lines:
-                self.stop_ptp(preconfirmation=True)
+            self.stop_ptp()
 
         if not self.loaded_clients:
             return []
 
         launched_processes = []
         for client_name, data in self.loaded_clients.items():
-            config_path: Path = self.ptp_profile_dir / data["config"]
+            config_path: Path = self.linuxptp_profile_dir / data["config"]
             namespace: str = data["namespace"]
             log_path: Path = self.log_dir / f"ptp-{client_name}.log"
-
-            if not config_path.exists():
-                continue
 
             self.log_dir.mkdir(parents=True, exist_ok=True)
             with open(log_path, 'w') as f:
                 f.write(f"[{datetime.now()}] Log reset for {client_name}\n")
 
-            ptp4l_bin = self.linuxptp_dir / "ptp4l" 
+            ptp4l_bin = self.linuxptp_dir / "ptp4l"
             command: list[str] = [
-                "ip", "netns", "exec", namespace,
+                "sudo", "ip", "netns", "exec", namespace,
                 ptp4l_bin, "-f", str(config_path), "-H", "-q", "-m"
             ]
 
             try:
                 with open(log_path, 'a') as log_file:
                     ptp_process = subprocess.Popen(
-                        ["sudo", "-n"] + command,
+                        command,
                         stdout=log_file,
                         stderr=subprocess.STDOUT,
                         stdin=subprocess.DEVNULL,
@@ -274,21 +200,12 @@ class LocalManager:
                     self.loaded_clients[client_name]["status"] = "Failed"
                     
             except Exception as e:
-                print(f"Error launching PTP on {client_name}: {e}")
+                self.loaded_clients[client_name]["status"] = "Error"
                 continue
         
         return launched_processes
-    
-    def stop_ptp(self, preconfirmation: bool = False) -> bool:
-        """
-        Stops all active PTP processes and clears the log directory.
 
-        Args:
-            preconfirmation (bool): If True, used to handle internal state before killing.
-
-        Returns:
-            bool: True if the processes were stopped successfully, False otherwise.
-        """
+    def stop_ptp(self) -> bool:
         result = subprocess.run(["pgrep", "-a", "ptp4l"], capture_output=True, text=True)
         lines = result.stdout.strip().splitlines()
 
@@ -298,7 +215,7 @@ class LocalManager:
         try:
             for line in lines:
                 pid, *cmd = line.split()
-                subprocess.run(["sudo", "kill", "-9", pid], check=True)
+                subprocess.run(["kill", "-9", pid], check=True)
 
             if self.log_dir.exists():
                 for archivo in self.log_dir.iterdir():
@@ -312,13 +229,6 @@ class LocalManager:
             return False
 
     def ping_server(self) -> List[Dict[str, str]]:
-        """
-        Pings the server defined in the configuration for each loaded client.
-
-        Returns:
-            List[Dict[str, str]]: A list of results containing client names, 
-                                   success status, and ping output.
-        """
         if not self.loaded_clients:
             return []
 
@@ -350,7 +260,7 @@ class LocalManager:
                 results.append({
                     "client": client_name,
                     "status": "Success",
-                    "output": output.strip().split('\n')[-1] 
+                    "output": output.strip().split('\n')[-1]
                 })
 
             except Exception as e:
@@ -360,15 +270,6 @@ class LocalManager:
         return results
 
     def show_logs(self, client_name: str) -> str:
-        """
-        Retrieves the last 100 lines of the log file for a specific client.
-
-        Args:
-            client_name (str): Name of the client whose logs should be retrieved.
-
-        Returns:
-            str: The last 100 lines of the log file or an error message.
-        """
         if client_name not in self.loaded_clients:
             return f"Error: Client '{client_name}' is not loaded."
 

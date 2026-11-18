@@ -1,28 +1,14 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-traffic_generator_view.py
-
-**Project**: Syncarium Platform
-**Description**: UI component for managing traffic generators.
-**Author**: PhD Student Alberto Ortega Ruiz, University of Granada
-**License**: GPLv3
-"""
-
 import streamlit as st
-from typing import Dict, Any
 import time
-import path_config.global_paths as global_paths
 import os
+
+from typing import Dict, Any
+import path_config.global_paths as global_paths
+
+from syncarium.core.traffic_generator import TrafficGenerator
 
 
 def display_port_config(port_attrs: Dict[str, Any]) -> None:
-    """
-    Renders port configuration in a table.
-
-    Args:
-        port_attrs (Dict[str, Any]): Dictionary containing port attributes.
-    """
     st.markdown("#### ⚙️ Port Configuration")
     if port_attrs:
         port_config_data = []
@@ -44,17 +30,10 @@ def display_port_config(port_attrs: Dict[str, Any]) -> None:
 
 
 def display_all_stats(stats: Dict[str, Any]) -> None:
-    """
-    Renders TRex statistics in a clean, organized manner.
-
-    Args:
-        stats (Dict[str, Any]): Dictionary containing TRex statistics.
-    """
     if not stats:
         st.info("No statistics available.")
         return
 
-    # --- Estadísticas por Puerto ---
     st.markdown("#### 🚦 Statistics by Port")
     port_data = []
     for port_id, port_stat in stats.items():
@@ -82,7 +61,6 @@ def display_all_stats(stats: Dict[str, Any]) -> None:
 
     st.markdown("---")
 
-    # --- Estadísticas Globales ---
     global_stats = stats.get("global", {})
     st.markdown("#### 🌐 Global Statistics")
     col1, col2, col3, col4 = st.columns(4)
@@ -97,7 +75,6 @@ def display_all_stats(stats: Dict[str, Any]) -> None:
 
     st.markdown("---")
 
-    # --- Estadísticas Totales ---
     total_stats = stats.get("total", {})
     st.markdown("#### 📈 Total Statistics")
     col1, col2 = st.columns(2)
@@ -110,7 +87,6 @@ def display_all_stats(stats: Dict[str, Any]) -> None:
 
     st.markdown("---")
 
-    # --- Latencia ---
     latency = stats.get("latency", {})
     if latency:
         st.markdown("#### ⏱️ Latency")
@@ -122,7 +98,6 @@ def display_all_stats(stats: Dict[str, Any]) -> None:
 
     st.markdown("---")
 
-    # --- Flujos Activos ---
     flow_stats = stats.get("flow_stats", {})
     if flow_stats:
         st.markdown("#### 🌊 Active Flows")
@@ -132,15 +107,6 @@ def display_all_stats(stats: Dict[str, Any]) -> None:
 
 
 def list_stl_profiles(load_dir: str) -> list:
-    """
-    Lists all STL profile files in the specified directory.
-    
-    Args:
-        load_dir (str): Path to the directory containing STL profiles.
-        
-    Returns:
-        list: List of STL profile file names.
-    """
     try:
         if os.path.exists(load_dir):
             return [f for f in os.listdir(load_dir) if f.endswith('.py')]
@@ -151,18 +117,10 @@ def list_stl_profiles(load_dir: str) -> list:
 
 
 def render_stl_controls(objs: Dict[str, Any]) -> None:
-    """
-    Renders STL profile controls and execution options.
-    
-    Args:
-        objs (Dict[str, Any]): Dictionary containing initialized application objects,
-                                  specifically "traffic_generator".
-    """
-    tg = objs["traffic_generator"]
+    tg: TrafficGenerator = objs["traffic_generator"]
     
     st.markdown("## 📜 STL Profile Management")
     
-    # List available STL profiles
     stl_profiles = list_stl_profiles(str(tg.load_dir))
     if not stl_profiles:
         st.warning("No STL profiles found in the load directory.")
@@ -175,7 +133,6 @@ def render_stl_controls(objs: Dict[str, Any]) -> None:
         key="selected_stl_profile"
     )
     
-    # Get profile details
     try:
         with open(os.path.join(tg.load_dir, selected_profile), 'r') as f:
             profile_content = f.read()
@@ -185,7 +142,6 @@ def render_stl_controls(objs: Dict[str, Any]) -> None:
     except Exception as e:
         st.error(f"Error reading profile: {str(e)}")
     
-    # STL execution controls
     st.markdown("---")
     st.subheader("STL Program Execution")
     
@@ -195,7 +151,6 @@ def render_stl_controls(objs: Dict[str, Any]) -> None:
         duration = st.number_input(
             "Duration (seconds)",
             min_value=1,
-            max_value=3600,
             value=10,
             key="stl_duration"
         )
@@ -217,13 +172,11 @@ def render_stl_controls(objs: Dict[str, Any]) -> None:
                     stl_output=output_file
                 ):
                     st.success("STL program started successfully!")
-                    # Refresh the page to update status
                     time.sleep(2)
                     st.rerun()
                 else:
                     st.error("Failed to start STL program.")
     
-    # Show current STL process status
     st.markdown("---")
     st.subheader("Current STL Status")
     
@@ -240,7 +193,6 @@ def render_stl_controls(objs: Dict[str, Any]) -> None:
     else:
         st.info(f"STL program is not running. Current state: {tg.stl_state}")
         
-    # Display current STL process information
     st.markdown("---")
     st.subheader("STL Process Information")
     
@@ -255,14 +207,7 @@ def render_stl_controls(objs: Dict[str, Any]) -> None:
 
 
 def render_traffic_generator(objs: Dict[str, Any]) -> None:
-    """
-    Renders the Traffic Generator UI.
-
-    Args:
-        objs (Dict[str, Any]): Dictionary containing initialized application objects,
-                               specifically "traffic_generator".
-    """
-    tg = objs["traffic_generator"]
+    tg: TrafficGenerator = objs["traffic_generator"]
     if "trex_stats" not in st.session_state:
         st.session_state["trex_stats"] = None
     if "show_stats" not in st.session_state:
@@ -292,10 +237,10 @@ def render_traffic_generator(objs: Dict[str, Any]) -> None:
             selected_name = st.selectbox(
                 "Choose Traffic Generator",
                 options=generators,
-                index=generators.index(tg.traffic_gen_name) if tg.traffic_gen_name in generators else 0
+                index=0
             )
 
-            if selected_name != tg.traffic_gen_name:
+            if st.button("Select Generator", key="select_generator_btn"):
                 if tg.select_traffic_gen(selected_name):
                     placeholder = st.empty()
                     for i in range(3, 0, -1):
@@ -304,78 +249,73 @@ def render_traffic_generator(objs: Dict[str, Any]) -> None:
                     st.rerun()
                 else:
                     st.error("Failed to switch generator.")
-            else:
-                st.info(f"Active Generator: **{tg.traffic_gen_name}** (v{tg.traffic_gen_ver})")
 
     with tab2:
-        if tg.traffic_gen_name and tg.traffic_gen_name.startswith("trex_"):
-            st.subheader("TRex Server Status")
-            server_status = tg.get_server_status()
-            if server_status.get("pid"):
-                st.table([
-                    {
-                        "PID": server_status["pid"],
-                        "Configuration": server_status["config"],
-                        "Status": server_status["status"]
-                    }
-                ])
-            else:
-                st.info("No active traffic generator server detected.")
+        st.subheader("Traffic Generator Status")
+        server_status = tg.get_server_status()
+        if server_status.get("pid"):
+            st.table([
+                {
+                    "PID": server_status["pid"],
+                    "Configuration": server_status["config"],
+                    "Status": server_status["status"]
+                }
+            ])
+        else:
+            st.info("No active traffic generator server detected.")
 
-            st.markdown("---")
+        st.markdown("---")
 
-            with st.expander("🖥️ TRex Server Controls", expanded=True):
-                st.markdown("### Server Controls")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("🖥️ Start TRex Server", use_container_width=True):
-                        with st.spinner("Starting TRex Server..."):
-                            if tg.start_trex_server():
-                                placeholder = st.empty()
-                                for i in range(3, 0, -1):
-                                    placeholder.success(f"TRex Server started! Refreshing in {i}s...")
-                                    time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error("Failed to start TRex Server.")
-                with col2:
-                    if st.button("🛑 Stop TRex Server", use_container_width=True):
-                        if tg.stop_trex_server():
+        with st.expander("🖥️ TRex Server Controls", expanded=True):
+            st.markdown("### Server Controls")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🖥️ Start TRex Server", use_container_width=True):
+                    with st.spinner("Starting TRex Server..."):
+                        if tg.start_trex_server():
                             placeholder = st.empty()
                             for i in range(3, 0, -1):
-                                placeholder.success(f"TRex Server stopped! Refreshing in {i}s...")
+                                placeholder.success(f"TRex Server started! Refreshing in {i}s...")
                                 time.sleep(1)
                             st.rerun()
                         else:
-                            st.error("Failed to stop TRex Server.")
+                            st.error("Failed to start TRex Server.")
+            with col2:
+                if st.button("🛑 Stop TRex Server", use_container_width=True):
+                    if tg.stop_trex_server():
+                        placeholder = st.empty()
+                        for i in range(3, 0, -1):
+                            placeholder.success(f"TRex Server stopped! Refreshing in {i}s...")
+                            time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("Failed to stop TRex Server.")
 
-            with st.expander("📦 DPDK Driver & Configuration", expanded=True):
-                st.markdown("### DPDK Management")
-                dpdk_files = [f.name for f in tg.dpdk_profile_dir.iterdir() if f.suffix == ".yaml"]
-                if dpdk_files:
-                    selected_dpdk = st.selectbox("Select DPDK Profile", dpdk_files)
-                    if st.button("📦 Load DPDK Driver", use_container_width=True):
-                        with st.spinner("Loading DPDK driver..."):
-                            if tg.load_dpdk_driver(selected_dpdk):
-                                placeholder = st.empty()
-                                for i in range(3, 0, -1):
-                                    placeholder.success(f"Driver loaded using {selected_dpdk}! Refreshing in {i}s...")
-                                    time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error("Failed to load DPDK driver. Ensure you have sudo privileges and the correct configuration.")
-                else:
-                    st.info("No DPDK profiles found.")
+        with st.expander("📦 DPDK Driver & Configuration", expanded=True):
+            st.markdown("### DPDK Management")
+            dpdk_files = [f.name for f in tg.dpdk_profile_dir.iterdir() if f.suffix == ".yaml"]
+            if dpdk_files:
+                selected_dpdk = st.selectbox("Select DPDK Profile", dpdk_files)
+                if st.button("📦 Load DPDK Driver", use_container_width=True):
+                    with st.spinner("Loading DPDK driver..."):
+                        if tg.load_dpdk_driver(selected_dpdk):
+                            placeholder = st.empty()
+                            for i in range(3, 0, -1):
+                                placeholder.success(f"Driver loaded using {selected_dpdk}! Refreshing in {i}s...")
+                                time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("Failed to load DPDK driver. Ensure you have sudo privileges and the correct configuration.")
+            else:
+                st.info("No DPDK profiles found.")
 
-                st.markdown("---")
-                st.markdown("### Active DPDK Drivers")
-                active_dpdk_drivers = tg.get_active_dpdk_drivers()
-                if active_dpdk_drivers:
-                    st.table(active_dpdk_drivers)
-                else:
-                    st.info("No active DPDK drivers detected.")
-        else:
-            st.warning("TRex generator not selected.")
+            st.markdown("---")
+            st.markdown("### Active DPDK Drivers")
+            active_dpdk_drivers = tg.get_active_dpdk_drivers()
+            if active_dpdk_drivers:
+                st.table(active_dpdk_drivers)
+            else:
+                st.info("No active DPDK drivers detected.")
 
     with tab3:
         st.subheader("TRex Statistics")
@@ -415,7 +355,6 @@ def render_traffic_generator(objs: Dict[str, Any]) -> None:
                     st.session_state["show_stats"] = False
 
         if st.session_state.get("trex_stats"):
-            # If auto-refresh is on, we fetch new stats every time.
             if auto_refresh:
                 result = tg.get_trex_stats()
                 if isinstance(result, dict) and "error" in result:
@@ -453,5 +392,4 @@ def render_traffic_generator(objs: Dict[str, Any]) -> None:
                 st.info("No statistics fetched yet. Click a button above to fetch them.")
 
     with tab4:
-        # STL Profile Management - This tab was missing!
         render_stl_controls(objs)

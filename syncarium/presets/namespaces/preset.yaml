@@ -1,0 +1,5 @@
+namespaces:
+  namespace_name:                     # <---- Namespace name
+    IP/mask:        "X.X.X.X/MM"      # <---- IP with the subred mask
+    gateway:        "X.X.X.X"         # <---- Gateway of the interface
+    interface:      "interface_name"  # <---- Interface name

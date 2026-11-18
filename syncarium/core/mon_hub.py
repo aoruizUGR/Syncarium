@@ -1,99 +1,20 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# mon_hub.py
-
-**Project**: Syncarium - Intelligent Timing Platform Toolkit
-**Description**: Syncarium Monitoring & Telemetry Hub
-**Author**: PhD Student Alberto Ortega Ruiz, University of Granada
-**Created**: 2026-10-26
-**Version**: 1.3.0
-**License**: GPLv3
-"""
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Standard Library Imports
 import os
 import subprocess
 import webbrowser
+
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Third-Party Imports
-# (None used directly in this file)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Local Application Imports
 import syncarium.utils as utils
 import path_config.global_paths as global_paths
 
 
-# ─────────────────────────────────────────────────────────────
-# 📊 MonHub Class
-# ─────────────────────────────────────────────────────────────
 class MonHub:
-    """
-    Monitoring and Telemetry Hub for Syncarium.
 
-    Provides deployment and management of the monitoring infrastructure used
-    for real-time telemetry transport, storage, and visualization.
-
-    The monitoring infrastructure is based on:
-
-    - Mosquitto MQTT Broker for telemetry transport.
-    - InfluxDB for time-series data storage.
-    - Grafana for real-time visualization.
-    - An internal MQTT to InfluxDB injector.
-
-    The internal injector subscribes to the configured Syncarium MQTT topics,
-    processes incoming telemetry messages, and stores the resulting measurements
-    in InfluxDB.
-
-    The injector is started and stopped automatically together with the
-    monitoring infrastructure. It is not exposed as an independent component
-    through the TUI.
-
-    ### Attributes
-    - **vt** (`utils.ViewTools`): Utility tools for rendering terminal views.
-    - **monitoring_dir** (`Path`): Root monitoring configuration directory.
-    - **compose_file** (`Path`): Docker Compose deployment file.
-    - **mqtt_dir** (`Path`): MQTT configuration directory.
-    - **grafana_dir** (`Path`): Grafana configuration directory.
-    - **influxdb_dir** (`Path`): InfluxDB configuration directory.
-    - **grafana_url** (`str`): URL used to access Grafana.
-    - **mqtt_host** (`str`): MQTT broker hostname or address.
-    - **mqtt_port** (`int`): MQTT broker TCP port.
-    - **influxdb_url** (`str`): URL used to access InfluxDB.
-    - **influxdb_org** (`str`): InfluxDB organization name.
-    - **influxdb_bucket** (`str`): InfluxDB telemetry bucket.
-    - **active_clients** (`Dict[str, Dict[str, Any]]`): Known telemetry clients.
-    - **injector_process** (`Optional[Any]`): Internal injector runtime handle.
-    """
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 🚧 Function: constructorl
-# ─────────────────────────────────────────────────────────────────────────────
     def __init__(
         self,
         vt: utils.ViewTools
     ) -> None:
-        """
-        Initializes the Monitoring and Telemetry Hub.
-
-        Sets up the Docker Compose deployment, monitoring service endpoints,
-        environment variables, and runtime state required to manage the
-        complete observability infrastructure.
-
-        ### Args:
-        - **vt** (`utils.ViewTools`): Utility tools for rendering terminal views.
-        """
-
-        # Store the shared ViewTools instance
         self.vt: utils.ViewTools = vt
 
         # Docker Compose deployment file

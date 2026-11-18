@@ -1,0 +1,5 @@
+dataex_datasources:
+  TimeStick_PTP_Log:
+    data_class: FileLogDataSource
+    pattern: "master offset\\s+(?P<offset>-?\\d+)\\s+s2\\s+freq\\s+(?P<freq>[+-]?\\d+)\\s+path delay\\s+(?P<delay>\\d+)"
+    filepath: ptp-TimeStick.log

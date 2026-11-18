@@ -3,58 +3,49 @@ import time
 import subprocess
 import yaml
 import sys
+
 from pathlib import Path
 from typing import Optional, Dict, List, Any
+
 import path_config.global_paths as global_paths
+import syncarium.utils.config_hugepages as hugepages_module
+
 
 class TrafficGenerator:
-    """
-    Manages load generator configurations and scripts within the Syncarium environment.
-    This class handles the backend logic for TRex and STL load generation.
-    """
 
     def __init__(self) -> None:
-        # Define paths for configuration and scripts
-        self.load_dir: Path = global_paths.LOAD_PROFILE_DIR
+        self.load_dir: Path = global_paths.TRAFFIC_PROFILE_DIR
         self.utils_dir: Path = global_paths.UTILS_DIR
         self.dpdk_profile_dir: Path = global_paths.DPDK_PROFILE_DIR
         self.scripts_dir: Path = global_paths.SCRIPTS_DIR
-
-        # Traffic generator metadata
+        self.trex_pid: Optional[int] = None
+        self.stl_env: Optional[Dict] = None
+        self.stl_process: Optional[Any] = None
+        self.stl_state: Optional[str] = None
+        self.stl_filename: Optional[str] = None
+        self.stl_args: Optional[List[str]] = None
+        self.stl_duration: Optional[float] = None
+        self.stl_start_time: Optional[float] = None
         self.traffic_gen_name: Optional[str] = None
-        self.traffic_gen_ver: Optional[str] = None
-        self.traffic_gen_dir: Optional[Path] = None
+        self.traffic_gen_dir: Path = global_paths.TGEN_DIR
         self.traffic_gen_server_dir: Optional[Path] = None
         self.traffic_gen_client_dir: Optional[Path] = None
 
-        # STL script execution details
-        self.stl_filename: Optional[str] = None
-        self.stl_args: Optional[List[str]] = None
-        self.stl_process: Optional[Any] = None
-        self.stl_start_time: Optional[float] = None
-        self.stl_duration: Optional[float] = None
-        self.stl_state: Optional[str] = None
-        self.stl_env: Optional[Dict] = None
-
-        # TRex server details
-        self.trex_pid: Optional[int] = None
-
-        # TRex TUI details removed
-
     def select_traffic_gen(self, selected_name: str) -> bool:
-        """Sets up the environment for a selected generator by name."""
         import streamlit as st
         self.traffic_gen_dir = global_paths.TGEN_DIR
         
         if not self.traffic_gen_dir.exists():
             return False
         
-        # Update internal paths based on selection
         self.traffic_gen_name = selected_name
         self.traffic_gen_server_dir = self.traffic_gen_dir / self.traffic_gen_name / "server"
         self.traffic_gen_client_dir = self.traffic_gen_dir / self.traffic_gen_name / "client"
         
-        # Build PYTHONPATH for STL client scripts using the updated server directory
+        if not self.traffic_gen_server_dir.exists():
+            print(f"Server directory does not exist: {self.traffic_gen_server_dir}")
+            return False
+        
         self.stl_env = os.environ.copy()
         trex_interactive = self.traffic_gen_server_dir / "automation/trex_control_plane/interactive"
         trex_external_libs = self.traffic_gen_server_dir / "external_libs/scapy-2.4.3"
@@ -62,22 +53,12 @@ class TrafficGenerator:
         for p in [str(trex_interactive), str(trex_external_libs)]:
             if p not in sys.path:
                 sys.path.insert(0, p)
-
-        version = self.traffic_gen_name.split("_v")[-1]
-        if self.traffic_gen_ver != version:
-            self.stop_trex_server()
-            self.traffic_gen_ver = version
         
-        # Persist the selection in session state
         st.session_state["selected_generator"] = selected_name
         
         return True
     
-    def load_dpdk_driver(self, file_cfg: Optional[str] = None) -> bool:
-        """
-        Loads the specified DPDK driver and binds network ports.
-        Returns: bool: True if successful, False otherwise.
-        """
+    def load_dpdk_driver(self, file_cfg: Optional[str] = None) -> bool:  
         if file_cfg:
             filepath_cfg = (self.dpdk_profile_dir / file_cfg).resolve()
         else:
@@ -101,34 +82,45 @@ class TrafficGenerator:
             return False
 
         ports = [config.get(f"pci_bus_port{i}") for i in range(n_ports)]
-        ports = [p for p in ports if p is not None and str(p).strip() != ""] # Filter out any None or empty values
+        ports = [p for p in ports if p is not None and str(p).strip() != ""] 
         
         if not ports:
             print(f"No valid ports found in {filepath_cfg}")
             return False
 
-        # Load driver
         try:
-            # Use -S to read password from stdin if needed, though ideally the user has NOPASSWD configured
             subprocess.run(["sudo", "-S", "modprobe", dpdk_driver], check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as e:
             print(f"Error running modprobe {dpdk_driver}: {e.stderr.strip()}")
             return False
 
-        # Bind ports
-        nic_bind_script = (self.utils_dir / "dpdk-devbind.py").resolve()
+        nic_bind_script = (self.utils_dir / "dpdk_devbind.py").resolve()
         cmd = ["sudo", "-S", "python3", str(nic_bind_script), "-b", dpdk_driver] + ports
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as e:
-            print(f"Error running dpdk-devbind.py: {e.stderr.strip()}")
+            print(f"Error running dpdk_devbind.py: {e.stderr.strip()}")
             return False
         
         return True
 
     def start_trex_server(self, sleep_seconds: int = 10, file_cfg: Optional[str] = None) -> bool:
-        """Starts the TRex server process."""
-        # Check if running
+        if not hasattr(self, 'traffic_gen_server_dir') or self.traffic_gen_server_dir is None:
+            try:
+                generators = [f.name for f in global_paths.TGEN_DIR.iterdir() if f.is_dir()]
+                if generators:
+                    self.select_traffic_gen(generators[0])
+                else:
+                    print("No traffic generators found")
+                    return False
+            except Exception:
+                print("Failed to initialize traffic generator")
+                return False
+        
+        if not hasattr(self, 'traffic_gen_server_dir') or self.traffic_gen_server_dir is None:
+            print("Traffic generator server directory not initialized")
+            return False
+            
         result = subprocess.run(["pgrep", "-a", "_t-rex-64"], capture_output=True, text=True)
         if result.stdout.strip():
             self.stop_trex_server()
@@ -140,13 +132,17 @@ class TrafficGenerator:
         else:
             filepath_cfg = self.traffic_gen_server_dir / file_cfg
         
-        script_path = self.scripts_dir / "config_hugepages.sh"
-        subprocess.run(["sudo", "chmod", "a+x", str(script_path)], check=True)
-        subprocess.run(["sudo", str(script_path)], check=True)
+        try:
+            result = hugepages_module.configure_hugepages()
+            if not result:
+                print("Error running config_hugepages.py")
+                return False
+        except Exception as e:
+            print(f"Error running config_hugepages.py: {e}")
+            return False
         
         command = [str(self.traffic_gen_server_dir / "t-rex-64"), "-i", "--software", "--no-scapy-server", "--cfg", str(filepath_cfg.resolve())]
         
-        # Start TRex server
         try:
             process = subprocess.Popen(
                 ["sudo"] + command,
@@ -155,7 +151,6 @@ class TrafficGenerator:
                 stdin=subprocess.DEVNULL,
                 cwd=self.traffic_gen_server_dir
             )
-            # Store the PID for proper cleanup
             self.trex_pid = process.pid
         except Exception as e:
             print(f"Error starting TRex server: {e}")
@@ -166,18 +161,14 @@ class TrafficGenerator:
         return True
 
     def stop_trex_server(self) -> bool:
-        """Stops all TRex server processes."""
-        # Try to kill using stored PID first (more reliable)
         if self.trex_pid is not None:
             try:
                 subprocess.run(["sudo", "kill", "-TERM", str(self.trex_pid)], check=True, capture_output=True)
                 self.trex_pid = None
                 return True
             except subprocess.CalledProcessError:
-                # If that fails, fall back to pgrep method
                 pass
 
-        # Fallback to pgrep method
         result = subprocess.run(["pgrep", "-a", "_t-rex-64"], capture_output=True, text=True)
         lines = result.stdout.strip().splitlines()
         if not lines:
@@ -188,20 +179,15 @@ class TrafficGenerator:
             try:
                 subprocess.run(["sudo", "kill", "-9", pid], check=True)
             except subprocess.CalledProcessError:
-                # If we can't kill it, continue with other processes
                 pass
         self.trex_pid = None
         return True
 
     def get_server_status(self) -> Dict[str, Any]:
-        """Retrieves the current TRex server status."""
-        # First check if we have a stored PID
         if self.trex_pid is not None:
             try:
-                # Verify that process with stored PID is still running
                 result = subprocess.run(["ps", "-p", str(self.trex_pid), "-o", "pid,cmd"], capture_output=True, text=True)
                 if result.returncode == 0 and self.trex_pid == int(result.stdout.split()[0]):
-                    # Process is still running, get config from command line
                     cmd = result.stdout.strip()
                     config_path = "Unknown"
                     if "--cfg" in cmd:
@@ -216,10 +202,8 @@ class TrafficGenerator:
                         "status": "Running"
                     }
             except (subprocess.CalledProcessError, ValueError):
-                # PID no longer valid or error in process check
-                self.trex_pid = None  # Reset stored PID
+                self.trex_pid = None
 
-        # Fallback to pgrep method if no stored PID or PID not valid
         result = subprocess.run(["pgrep", "-a", "_t-rex-64"], capture_output=True, text=True)
         lines = result.stdout.strip().splitlines()
         
@@ -230,14 +214,10 @@ class TrafficGenerator:
                 "status": "Stopped"
             }
         
-        # Get the first line (assuming only one server is running)
         line = lines[0]
-        # pgrep -a output format is usually: "PID ProcessName [Args]"
-        # or "PID ProcessName"
         parts = line.split()
         pid = parts[0]
         
-        # Try to find the config path in the command line
         config_path = "Unknown"
         if "--cfg" in line:
             try:
@@ -246,7 +226,6 @@ class TrafficGenerator:
             except IndexError:
                 pass
         
-        # Store the PID for future reference
         self.trex_pid = int(pid)
         return {
             "pid": pid,
@@ -255,13 +234,11 @@ class TrafficGenerator:
         }
 
     def get_active_dpdk_drivers(self) -> List[Dict[str, str]]:
-        """Retrieves a list of active DPDK drivers and their associated cards."""
         active_devices = []
         
         try:
-            # Use the dpdk-devbind script to get the status
             result = subprocess.run(
-                ["python3", str(self.utils_dir / "dpdk-devbind.py"), "-s"],
+                ["python3", str(self.utils_dir / "dpdk_devbind.py"), "-s"],
                 capture_output=True,
                 text=True,
                 check=True
@@ -271,22 +248,18 @@ class TrafficGenerator:
             dpdk_drivers = ["igb_uio", "vfio-pci", "uio_pci_generic"]
             
             for line in lines:
-                # Check if the line contains a PCI slot (e.g., 0000:16:00.0)
                 if line.strip() and line[0].isdigit() and ":" in line[:5]:
                     parts = line.split()
                     if len(parts) >= 4:
                         slot = parts[0]
-                        # The device name is usually the second part, enclosed in quotes
                         device_name = parts[1].strip("'")
                         
-                        # Find the driver part (drv=...)
                         driver = "None"
                         for part in parts:
                             if part.startswith("drv="):
                                 driver = part.split("=")[1]
                                 break
                         
-                        # Only include if the driver is one of the DPDK-compatible drivers
                         if driver in dpdk_drivers:
                             active_devices.append({
                                 "slot": slot,
@@ -294,16 +267,12 @@ class TrafficGenerator:
                                 "driver": driver
                             })
         except Exception as e:
-            print(f"Error parsing dpdk-devbind output: {e}")
+            print(f"Error parsing dpdk_devbind output: {e}")
             
         return active_devices
 
     def get_trex_stats(self) -> Optional[Dict[str, Any]]:
-        """
-        Connects to the TRex server via STL API and retrieves port statistics.
-        Returns: Optional[Dict]: A dictionary of stats if successful, or a dict with error info otherwise.
-        """
-        from trex.stl.api import STLClient
+        from trex.stl.api import STLClient # pyright: ignore[reportMissingImports]
 
         if STLClient is None:
             print("Error: STLClient is not available. Check the TRex path configuration.")
@@ -311,12 +280,9 @@ class TrafficGenerator:
 
         client = STLClient()
         try:
-            # Conectar al servidor TRex
             client.connect()
             
-            # Obtener estadísticas de los puertos de forma limpia
             ports = client.get_all_ports()
-            #print(f"Puertos activos: {ports}")
             stats = client.get_stats(ports)
             port_attrs = {}
             for port_id in ports:
@@ -332,7 +298,6 @@ class TrafficGenerator:
             return {"error": error_msg}
             
         finally:
-            # Desconectar limpiamente
             try:
                 client.disconnect()
             except Exception:
@@ -342,11 +307,25 @@ class TrafficGenerator:
         self,
         file_cfg: Optional[Path] = None,
         stl_duration: Optional[int] = None,
-        stl_output: Optional[str] = None,
-        logger=None,
-        extra_indent: int = 0
+        stl_output: Optional[str] = None
     ) -> bool:
-        """Launches the STL program and updates internal state."""
+
+        if not hasattr(self, 'traffic_gen_client_dir') or self.traffic_gen_client_dir is None:
+            try:
+                generators = [f.name for f in global_paths.TGEN_DIR.iterdir() if f.is_dir()]
+                if generators:
+                    self.select_traffic_gen(generators[0])
+                else:
+                    print("No traffic generators found")
+                    return False
+            except Exception:
+                print("Failed to initialize traffic generator")
+                return False
+
+        if not hasattr(self, 'traffic_gen_client_dir') or self.traffic_gen_client_dir is None:
+            print("Traffic generator client directory not initialized")
+            return False
+
         if self.stl_process and self.stl_process.poll() is None:
             return False
 
@@ -389,7 +368,7 @@ class TrafficGenerator:
         return True
 
     def stop_stl_program(self, preconfirmation: bool = False) -> bool:
-        """Stops the active STL process."""
+
         if self.stl_state != "Launched":
             return True
 
@@ -400,5 +379,3 @@ class TrafficGenerator:
             return True
         except Exception:
             return False
-
-
