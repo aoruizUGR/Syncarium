@@ -1,11 +1,11 @@
-import time
 import streamlit as st
 import subprocess
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from pathlib import Path
 
 from syncarium.core.local_manager import LocalManager
+from syncarium.ui.utils import show_success_refresh, handle_yaml_preview
 
 
 def get_active_namespaces_table() -> List[Dict[str, str]]:
@@ -13,31 +13,26 @@ def get_active_namespaces_table() -> List[Dict[str, str]]:
         result = subprocess.run(["ip", "netns", "list"], capture_output=True, text=True)
         lines = result.stdout.strip().split('\n')
         data = []
-        
+
         if lines and lines[0]:
             for line in lines:
                 ns = line.split()[0]
-                
-                iface = "N/A"
-                ip = "N/A"
-                mac = "N/A"
-                gw = "N/A"
+
+                iface = ip = mac = gw = "N/A"
 
                 try:
                     interfaces_result = subprocess.run(
                         ["sudo", "ip", "netns", "exec", ns, "ip", "-o", "link", "show"],
                         capture_output=True, text=True, check=True
                     )
-                    interfaces = interfaces_result.stdout.strip().split('\n')
-                    
-                    for if_line in interfaces:
+                    for if_line in interfaces_result.stdout.strip().split('\n'):
                         parts = if_line.split()
                         if len(parts) >= 2:
-                            current_iface = parts[1].strip(':')
-                            if current_iface != "lo":
-                                iface = current_iface
+                            candidate = parts[1].strip(':')
+                            if candidate != "lo":
+                                iface = candidate
                                 break
-                    
+
                     if iface != "N/A":
                         mac_result = subprocess.run(
                             ["sudo", "ip", "netns", "exec", ns, "ip", "link", "show", iface],
@@ -51,25 +46,19 @@ def get_active_namespaces_table() -> List[Dict[str, str]]:
                             ["sudo", "ip", "netns", "exec", ns, "ip", "-o", "-4", "addr", "show"],
                             capture_output=True, text=True, check=True
                         )
-                        ips = ip_result.stdout.strip().split('\n')
-                        for ip_line in ips:
-                            if iface in ip_line:
-                                parts = ip_line.split()
-                                if len(parts) >= 4:
-                                    ip = parts[3]
-                                    break
+                        for ip_line in ip_result.stdout.strip().split('\n'):
+                            if iface in ip_line and len(ip_line.split()) >= 4:
+                                ip = ip_line.split()[3]
+                                break
 
                         gw_result = subprocess.run(
                             ["sudo", "ip", "netns", "exec", ns, "ip", "route", "show", "default"],
                             capture_output=True, text=True, check=True
                         )
-                        gws = gw_result.stdout.strip().split('\n')
-                        for gw_line in gws:
-                            if "via" in gw_line:
-                                parts = gw_line.split()
-                                if len(parts) >= 3:
-                                    gw = parts[2]
-                                    break
+                        for gw_line in gw_result.stdout.strip().split('\n'):
+                            if "via" in gw_line and len(gw_line.split()) >= 3:
+                                gw = gw_line.split()[2]
+                                break
                 except subprocess.CalledProcessError:
                     pass
 
@@ -85,10 +74,50 @@ def get_active_namespaces_table() -> List[Dict[str, str]]:
         return []
 
 
+def render_preset_section(profile_dir: Path, label: str, button_label: str, action) -> None:
+    """Renderiza la sección de presets (selectbox + preview + botón de acción)."""
+    st.markdown("**Presets**")
+    presets = [f.name for f in Path(profile_dir).glob("*.yaml")]
+    if not presets:
+        st.warning(f"No presets found in profile directory.")
+        return
+
+    selected_preset = st.selectbox(label, presets)
+    if not selected_preset:
+        return
+
+    preset_path = Path(profile_dir) / selected_preset
+    try:
+        yaml_content = preset_path.read_text()
+        st.markdown(f"**Preview of `{selected_preset}`**")
+        st.text_area(
+            "YAML Content", value=yaml_content, height=200,
+            key=f"yaml_preview_{str(preset_path).replace('/', '_').replace('.', '_')}"
+        )
+    except Exception as e:
+        st.warning(f"Could not load YAML preview: {str(e)}")
+
+    if st.button(button_label):
+        action(selected_preset)
+
+
+def render_upload_section(label: str, button_label: str, key: str, action) -> None:
+    """Renderiza la sección de subida de archivo custom (uploader + preview + botón)."""
+    st.markdown("**Custom Upload**")
+    uploaded_file = st.file_uploader(label, type=["yaml"], key=key)
+    if not uploaded_file:
+        return
+
+    handle_yaml_preview(uploaded_file, uploaded_file.name)
+
+    if st.button(button_label, key=f"{key}_btn"):
+        action(uploaded_file.name)
+
+
 def render_local_manager(objs: Dict[str, Any]) -> None:
     lm: LocalManager = objs["local_manager"]
     st.header("🛠️ Local Manager Control")
-    
+
     tab1, tab2 = st.tabs([
         "🌐 Network Infrastructure",
         "⏱️ PTP Management"
@@ -101,176 +130,111 @@ def render_local_manager(objs: Dict[str, Any]) -> None:
             st.table(namespaces_data)
         else:
             st.info("No active network namespaces detected.")
-        
-        with st.expander("🏗️ Namespace Management", expanded=True):
-            st.markdown("### Manage Network Namespaces")
-            col_ns1, col_ns2 = st.columns(2)
-            with col_ns1:
-               st.markdown("**Presets**")
-               ns_presets = [f.name for f in Path(lm.config_dir).glob("*.yaml")]
-               if ns_presets:
-                   selected_ns_preset = st.selectbox("Select Namespace Configuration", ns_presets)
-                   
-                   if selected_ns_preset:
-                       try:
-                           preset_path = Path(lm.config_dir) / selected_ns_preset
-                           with open(preset_path, 'r') as f:
-                               yaml_content = f.read()
-                           st.markdown(f"**Preview of `{selected_ns_preset}`**")
-                           st.text_area("YAML Content", value=yaml_content, height=200, key=f"yaml_preview_ns_{selected_ns_preset}_{str(preset_path).replace('/', '_').replace('.', '_')}")
-                       except Exception as e:
-                           st.warning(f"Could not load YAML preview: {str(e)}")
-                   
-                   if st.button("🚀 Start Namespaces from Preset"):
-                       with st.spinner("Deploying namespaces..."):
-                           success, error_msg = lm.start_namespaces(file_cfg=selected_ns_preset)
-                           if success:
-                               placeholder = st.empty()
-                               for i in range(3, 0, -1):
-                                   placeholder.success(f"Success! Refreshing in {i}s...")
-                                   time.sleep(1)
-                               st.rerun()
-                           else:
-                               st.error(error_msg)
-               else:
-                   st.warning("No namespace presets found in config directory.")
-            
-            with col_ns2:
-                st.markdown("**Custom Upload**")
-                uploaded_ns_file = st.file_uploader("Upload Custom Namespace Config", type=["yaml"], key="ns_upload")
-                if uploaded_ns_file:
-                    if st.button("🚀 Start Namespaces from Upload", key="ns_upload_btn"):
-                        with st.spinner("Deploying..."):
-                            success, error_msg = lm.start_namespaces(file_cfg=uploaded_ns_file.name)
-                            if success:
-                                placeholder = st.empty()
-                                for i in range(3, 0, -1):
-                                    placeholder.success(f"Success! Refreshing in {i}s...")
-                                    time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error(error_msg)
-                
-            st.markdown("### Namespace Cleanup")
-            if st.button("Stop all Namespaces", type="primary", use_container_width=True):
-                success, error_msg = lm.stop_namespaces()
-                if success:
-                    placeholder = st.empty()
-                    for i in range(3, 0, -1):
-                        placeholder.success(f"Namespaces deleted! Refreshing in {i}s...")
-                        time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error(error_msg)
+
+        st.markdown("### Manage Network Namespaces")
+        col_ns1, col_ns2 = st.columns(2)
+        with col_ns1:
+            def start_ns_preset(preset: str) -> None:
+                with st.spinner("Deploying namespaces..."):
+                    success, error_msg = lm.start_namespaces(file_cfg=preset)
+                    if success:
+                        show_success_refresh("Success!")
+                    else:
+                        st.error(error_msg)
+
+            render_preset_section(
+                lm.config_dir, "Select Namespace Configuration",
+                "🚀 Start Namespaces from Preset", start_ns_preset
+            )
+
+        with col_ns2:
+            def start_ns_upload(filename: str) -> None:
+                with st.spinner("Deploying..."):
+                    success, error_msg = lm.start_namespaces(file_cfg=filename)
+                    if success:
+                        show_success_refresh("Success!")
+                    else:
+                        st.error(error_msg)
+
+            render_upload_section(
+                "Upload Custom Namespace Config",
+                "🚀 Start Namespaces from Upload", "ns_upload", start_ns_upload
+            )
+
+        st.markdown("### Namespace Cleanup")
+        if st.button("Stop all Namespaces", type="primary", use_container_width=True):
+            success, error_msg = lm.stop_namespaces()
+            if success:
+                show_success_refresh("Namespaces deleted!")
+            else:
+                st.error(error_msg)
 
     with tab2:
         st.subheader("PTP Client Status")
         if lm.loaded_clients:
-            clients_status = []
-            for client_name, data in lm.loaded_clients.items():
-                clients_status.append({
+            clients_status = [
+                {
                     "Client": client_name,
                     "PID": str(data.get("pid", "N/A")),
                     "Namespace": data.get("namespace"),
                     "Interface": data.get("interface"),
                     "Config File": data.get("config", "N/A"),
                     "Status": data.get("status", "Loaded")
-                })
+                }
+                for client_name, data in lm.loaded_clients.items()
+            ]
             st.table(clients_status)
         else:
             st.info("No PTP clients loaded. Use the configuration section below.")
 
-        st.markdown("---")
-        
-        with st.expander("📡 PTP Configuration", expanded=True):
-            st.markdown("### Manage PTP Configurations")
-            col_ptp1, col_ptp2 = st.columns(2)
-            with col_ptp1:
-                st.markdown("**Presets**")
-                ptp_presets = [f.name for f in Path(lm.ptp_clients_profile_dir).glob("*.yaml")]
-                if ptp_presets:
-                    selected_ptp_preset = st.selectbox("Select PTP Configuration", ptp_presets)
-                    if selected_ptp_preset:
-                        try:
-                            preset_path = Path(lm.ptp_clients_profile_dir) / selected_ptp_preset
-                            with open(preset_path, 'r') as f:
-                                yaml_content = f.read()
-                            st.markdown(f"**Preview of `{selected_ptp_preset}`**")
-                            st.text_area("YAML Content", value=yaml_content, height=200, key=f"yaml_preview_ptp_{selected_ptp_preset}_{str(preset_path).replace('/', '_').replace('.', '_')}")
-                        except Exception as e:
-                            st.warning(f"Could not load YAML preview: {str(e)}")
-                
-                    if st.button("🚀 Load and Start PTP from Preset"):
-                        with st.spinner("Loading and starting PTP..."):
-                            if lm.load_clients(file_cfg=selected_ptp_preset):
-                                processes = lm.start_ptp(stop_existing=True)
-                                if processes:
-                                    placeholder = st.empty()
-                                    for i in range(3, 0, -1):
-                                        placeholder.success(f"PTP processes launched successfully! Refreshing in {i}s...")
-                                        time.sleep(1)
-                                    st.rerun()
-                                else:
-                                    st.error("Configuration loaded but no processes were launched.")
-                            else:
-                                st.error("Failed to load configuration.")
-                else:
-                    st.warning("No PTP presets found in profile directory.")
+        st.markdown("### Manage PTP Configurations")
+        col_ptp1, col_ptp2 = st.columns(2)
 
-            with col_ptp2:
-                st.markdown("**Custom Upload**")
-                uploaded_ptp_file = st.file_uploader("Upload Custom PTP Config", type=["yaml"], key="ptp_upload")
-                if uploaded_ptp_file:
-                    if st.button("🚀 Load and Start PTP from Upload", key="ptp_upload_btn"):
-                        with st.spinner("Loading and starting PTP..."):
-                            if lm.load_clients(file_cfg=uploaded_ptp_file.name):
-                                processes = lm.start_ptp(stop_existing=True)
-                                if processes:
-                                    placeholder = st.empty()
-                                    for i in range(3, 0, -1):
-                                        placeholder.success(f"PTP processes launched successfully! Refreshing in {i}s...")
-                                        time.sleep(1)
-                                    st.rerun()
-                                else:
-                                    st.error("Configuration loaded but no processes were launched.")
-                            else:
-                                st.error("Failed to load configuration.")
-                        st.markdown("---")
-
-            st.markdown("### PTP Clients Cleanup")
-            if st.button("Stop all PTP", type="primary", use_container_width=True):
-                if lm.stop_ptp():
-                    placeholder = st.empty()
-                    for i in range(3, 0, -1):
-                        placeholder.success(f"All PTP processes stopped and logs cleared! Refreshing in {i}s...")
-                        time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("Error occurred while stopping PTP.")
-                    
-        st.markdown("---")
-        
-        with st.expander("🛠️ Connectivity Tools", expanded=True):
-            st.markdown("### Tools")
-            if lm.loaded_clients:
-                if st.button("📡 Ping PTP Server"):
-                    results = lm.ping_server()
-                    if results:
-                        for res in results:
-                            if "Error" in res["status"]:
-                                st.error(f"{res['client']}: {res['status']}")
-                            else:
-                                st.success(f"{res['client']}: {res['status']}")
-                                st.caption(f"Output: {res['output']}")
+        def start_ptp_from_config(file_cfg: str) -> None:
+            with st.spinner("Loading and starting PTP..."):
+                if lm.load_clients(file_cfg=file_cfg):
+                    processes = lm.start_ptp(stop_existing=True)
+                    if processes:
+                        show_success_refresh("PTP processes launched successfully!", 3)
                     else:
-                        st.warning("No clients loaded to ping.")
-            
-                selected_client = st.selectbox("Select Client to View Logs", options=list(lm.loaded_clients.keys()))
-                if st.button("📄 Show PTP Logs"):
-                    log_content = lm.show_logs(selected_client)
-                    st.info(f"Showing last 100 lines of {selected_client}")
-                    st.code(log_content, language="log")
-            else:
-                st.warning("No clients loaded to view logs.")
+                        st.error("Configuration loaded but no processes were launched.")
+                else:
+                    st.error("Failed to load configuration.")
 
-        st.markdown("---")
+        with col_ptp1:
+            render_preset_section(
+                lm.ptp_clients_profile_dir, "Select PTP Configuration",
+                "🚀 Load and Start PTP from Preset", start_ptp_from_config
+            )
+
+        with col_ptp2:
+            render_upload_section(
+                "Upload Custom PTP Config",
+                "🚀 Load and Start PTP from Upload", "ptp_upload", start_ptp_from_config
+            )
+
+        st.markdown("### PTP Clients Cleanup")
+        if st.button("Stop all PTP", type="primary", use_container_width=True):
+            if lm.stop_ptp():
+                show_success_refresh("All PTP processes stopped and logs cleared!")
+            else:
+                st.error("Error occurred while stopping PTP.")
+
+        st.markdown("### Tools")
+        if lm.loaded_clients:
+            if st.button("📡 Ping PTP Server"):
+                results = lm.ping_server()
+                for res in results:
+                    if "Error" in res["status"]:
+                        st.error(f"{res['client']}: {res['status']}")
+                    else:
+                        st.success(f"{res['client']}: {res['status']}")
+                        st.caption(f"Output: {res['output']}")
+
+            selected_client = st.selectbox("Select Client to View Logs", options=list(lm.loaded_clients.keys()))
+            if st.button("📄 Show PTP Logs"):
+                log_content = lm.show_logs(selected_client)
+                st.info(f"Showing last 100 lines of {selected_client}")
+                st.code(log_content, language="log")
+        else:
+            st.warning("No clients loaded to view logs.")

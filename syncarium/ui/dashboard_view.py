@@ -1,83 +1,64 @@
-import psutil
 import platform
+import psutil
 import streamlit as st
 
-from typing import Optional
 
-
-def get_cpu_model() -> str:
+def _cpu_model() -> str:
     try:
-        with open("/proc/cpuinfo", "r") as f:
-            for line in f:
-                if "model name" in line:
-                    return line.split(":")[1].strip()
-    except:
-        pass
-    return platform.processor()
+        with open("/proc/cpuinfo") as f:
+            return next(l.split(":", 1)[1].strip() for l in f if "model name" in l)
+    except (OSError, StopIteration):
+        return platform.processor()
 
-def get_cpu_temp() -> Optional[float]:
+
+def _cpu_temp() -> float | None:
     try:
-        with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+        with open("/sys/class/thermal/thermal_zone0/temp") as f:
             return int(f.read()) / 1000.0
-    except:
+    except OSError:
         return None
+
 
 def render_dashboard(objs: dict) -> None:
     st.header("🚀 System Telemetry")
     st.markdown("### *Real-time Node Status*")
     st.markdown("---")
 
-    metrics_placeholder = st.empty()
-
-    cpu_usage = psutil.cpu_percent(interval=None) or psutil.cpu_percent(interval=0.1)
+    cpu = psutil.cpu_percent(interval=None) or psutil.cpu_percent(interval=0.1)
     ram = psutil.virtual_memory()
-    temp = get_cpu_temp()
-    pids_count = len(psutil.pids())
+    temp = _cpu_temp()
 
-    with metrics_placeholder.container():
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("CPU Usage", f"{cpu_usage}%")
-        with col2:
-            st.metric("RAM Usage", f"{ram.percent}%", f"{ram.used // (1024**2)}MB / {ram.total // (1024**2)}MB")
-        with col3:
-            st.metric("Active Processes", pids_count)
-        with col4:
-            st.metric("CPU Temp", f"{temp}°C" if temp else "N/A")
+    with st.empty():
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("CPU Usage", f"{cpu}%")
+        c2.metric("RAM Usage", f"{ram.percent}%", f"{ram.used // 1024**2}MB / {ram.total // 1024**2}MB")
+        c3.metric("Active Processes", len(psutil.pids()))
+        c4.metric("CPU Temp", f"{temp}°C" if temp else "N/A")
 
     st.markdown("---")
-
-    col_left, col_right = st.columns(2)
-
-    with col_left:
+    left, right = st.columns(2)
+    with left:
         st.subheader("🐧 Kernel Information")
-        kernel_info = f"{platform.system()} {platform.release()} ({platform.version()})"
-        st.info(f"**Kernel:** {kernel_info}")
+        st.info(f"**Kernel:** {platform.system()} {platform.release()} ({platform.version()})")
         st.write(f"**Hostname:** {platform.node()}")
         st.write(f"**Architecture:** {platform.machine()}")
-
-    with col_right:
+    with right:
         st.subheader("📋 Hardware Info")
-        st.info(f"**Processor:** {get_cpu_model()}")
+        st.info(f"**Processor:** {_cpu_model()}")
         st.write(f"**Physical Cores:** {psutil.cpu_count(logical=False)}")
         st.write(f"**Logical Cores:** {psutil.cpu_count(logical=True)}")
 
     st.markdown("---")
-    
     st.subheader("🌐 Network Interfaces")
-    net_col1, net_col2 = st.columns(2)
-    interfaces = psutil.net_if_addrs()
-    
-    with net_col1:
+    n1, n2 = st.columns(2)
+    ifaces = psutil.net_if_addrs()
+    with n1:
         st.write("**Ethernet/Wireless**")
-        for name, addrs in interfaces.items():
-            if name != 'lo':
-                ipv4 = next((addr.address for addr in addrs if addr.family == 2), "N/A")
-                st.text(f"{name}: {ipv4}")
-    
-    with net_col2:
+        for name, addrs in ifaces.items():
+            if name != "lo":
+                st.text(f"{name}: {next((a.address for a in addrs if a.family == 2), 'N/A')}")
+    with n2:
         st.write("**Loopback & Virtuals**")
-        for name, addrs in interfaces.items():
-            if name == 'lo':
-                ipv4 = next((addr.address for addr in addrs if addr.family == 2), "N/A")
-                st.text(f"{name}: {ipv4}")
+        for name, addrs in ifaces.items():
+            if name == "lo":
+                st.text(f"{name}: {next((a.address for a in addrs if a.family == 2), 'N/A')}")
